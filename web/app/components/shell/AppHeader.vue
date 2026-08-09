@@ -7,6 +7,12 @@ const aboutOpen = ref(false);
 const { settings } = useAppSettings();
 const { state: engineState } = useEngine();
 const config = useRuntimeConfig();
+const displayBuildHash = computed(() => {
+  const hash = config.public.buildHash;
+  return hash === "development"
+      ? hash
+      : hash.slice(0, 7);
+});
 
 const concurrencyOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 const menuItems = computed<DropdownMenuItem[][]>(() => [
@@ -118,7 +124,7 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
           <span class="text-muted">Engine</span>
           <span class="font-medium capitalize text-highlighted">{{ engineState }}</span>
           <span class="text-muted">Build</span>
-          <span class="font-mono text-xs text-highlighted">{{ config.public.buildHash }}</span>
+          <span class="font-mono text-xs text-highlighted">{{ displayBuildHash }}</span>
         </div>
       </div>
     </template>

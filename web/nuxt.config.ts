@@ -1,8 +1,10 @@
-const baseURL = process.env.NUXT_APP_BASE_URL || "/";
-
 export default defineNuxtConfig({
     ssr: false,
-    devtools: { enabled: process.env.NODE_ENV !== "production" },
+    devtools: { enabled: false },
+
+    $development: {
+        devtools: { enabled: true }
+    },
 
     modules: ["@nuxt/ui"],
 
@@ -13,7 +15,7 @@ export default defineNuxtConfig({
     },
 
     app: {
-        baseURL,
+        baseURL: "/",
         head: {
             title: "Media Resolver",
             meta: [
@@ -28,8 +30,8 @@ export default defineNuxtConfig({
 
     runtimeConfig: {
         public: {
-            buildHash: process.env.GITHUB_SHA?.slice(0, 7) || "development",
-            resolverEndpoint: process.env.NUXT_PUBLIC_RESOLVER_ENDPOINT || ""
+            buildHash: "development",
+            resolverEndpoint: ""
         }
     },
 

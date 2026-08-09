@@ -39,6 +39,7 @@ jobs:
         working-directory: web
         env:
           NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
+          NUXT_PUBLIC_BUILD_HASH: ${{ github.sha }}
           NUXT_PUBLIC_RESOLVER_ENDPOINT: ${{ vars.RESOLVER_ENDPOINT }}
         run: bun run generate
       - uses: actions/configure-pages@v6
