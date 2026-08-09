@@ -13,7 +13,11 @@ export default defineNuxtPlugin(() => {
     void (
             async () => {
                 try {
-                    const moduleUrl = `${config.app.baseURL}wasm/engine.js`;
+                    const modulePath = `${config.app.baseURL}wasm/engine.js`;
+                    const moduleVersion = import.meta.dev
+                            ? `${Date.now()}`
+                            : String(config.public.buildHash || "development");
+                    const moduleUrl = `${modulePath}?v=${encodeURIComponent(moduleVersion)}`;
                     const module = await import(/* @vite-ignore */ moduleUrl);
                     await module.default();
                     installEngineRuntime({

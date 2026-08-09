@@ -27,6 +27,7 @@ const submit = async () => {
       emit("taskAdded");
       break;
     case "duplicate":
+      input.value = "";
       toast.add({
         title: "Task already exists",
         description: "The existing task has been selected.",
@@ -48,7 +49,7 @@ const submit = async () => {
 </script>
 
 <template>
-  <div class="space-y-2">
+  <form class="space-y-2" @submit.prevent="submit">
     <div class="flex gap-2">
       <UInput
           v-model="input"
@@ -58,7 +59,6 @@ const submit = async () => {
           icon="i-lucide-link"
           placeholder="Paste a supported link"
           size="md"
-          @keyup.enter="submit"
       />
       <UTooltip text="Add task">
         <UButton
@@ -67,7 +67,7 @@ const submit = async () => {
             aria-label="Add task"
             icon="i-lucide-plus"
             size="md"
-            @click="submit"
+            type="submit"
         />
       </UTooltip>
     </div>
@@ -79,6 +79,7 @@ const submit = async () => {
           icon="i-lucide-list-plus"
           label="Batch add"
           size="sm"
+          type="button"
           variant="ghost"
           @click="batchOpen = true"
       />
@@ -86,7 +87,7 @@ const submit = async () => {
       <span v-else-if="engineState === 'error'"
             class="text-xs text-error">Initialization failed</span>
     </div>
-  </div>
+  </form>
 
   <BatchTaskModal v-model:open="batchOpen" @added="emit('taskAdded')"/>
 </template>

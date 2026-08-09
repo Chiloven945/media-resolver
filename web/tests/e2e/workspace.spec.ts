@@ -207,7 +207,7 @@ export function transport_failed(session) {
 `;
 
 async function setup(page: Page) {
-    await page.route("**/wasm/engine.js", route => route.fulfill({
+    await page.route("**/wasm/engine.js*", route => route.fulfill({
         status: 200,
         contentType: "text/javascript",
         headers: { "cache-control": "no-store" },
@@ -248,6 +248,7 @@ async function setup(page: Page) {
 
 async function addTask(page: Page, id: string) {
     const input = page.getByLabel("Supported link").first();
+    await expect(input).toBeEnabled();
     await input.fill(`https://example.test/user/status/${id}`);
     await input.press("Enter");
     await expect(input).toHaveValue("");
@@ -259,15 +260,16 @@ function desktopOnly(testInfo: TestInfo) {
 
 test.beforeEach(async ({ page }) => {
     await setup(page);
-    await page.goto("/");
-    await expect(page.getByText("Media Resolver").first()).toBeVisible();
+    await page.goto("/", { waitUntil: "domcontentloaded" });
 });
 
 test(
         "desktop uses one global header and a constrained task sidebar",
         async ({ page }, testInfo) => {
             desktopOnly(testInfo);
+            await expect(page.getByTestId("app-header")).toBeVisible({ timeout: 15_000 });
             await expect(page.getByTestId("app-header")).toHaveCount(1);
+            await expect(page.locator(".desktop-task-panel")).toBeVisible();
             const box = await page.locator(".desktop-task-panel").boundingBox();
             expect(box).not.toBeNull();
             expect(box!.width).toBeGreaterThanOrEqual(279);
@@ -618,10 +620,10 @@ test(
         "surfaces engine initialization failure without implementation details",
         async ({ page }, testInfo) => {
             desktopOnly(testInfo);
-            await page.unroute("**/wasm/engine.js");
-            await page.route("**/wasm/engine.js", route => route.abort("failed"));
-            await page.reload();
-            await expect(page.getByText("Initialization failed")).toBeVisible();
+            await page.unroute("**/wasm/engine.js*");
+            await page.route("**/wasm/engine.js*", route => route.abort("failed"));
+            await page.reload({ waitUntil: "domcontentloaded" });
+            await expect(page.getByText("Initialization failed")).toBeVisible({ timeout: 15_000 });
             await expect(page.getByLabel("Supported link")).toBeDisabled();
         }
 );
@@ -633,8 +635,10 @@ test("mobile task drawer creates a task and closes on selection", async ({ page 
 
     const drawer = page.getByRole("dialog");
     const input = drawer.getByLabel("Supported link");
+    await expect(input).toBeEnabled();
     await input.fill("https://example.test/user/status/6001");
     await input.press("Enter");
+    await expect(input).toHaveValue("");
     await expect(page.getByText("Manage active and completed tasks.")).not.toBeVisible();
     await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
 
@@ -847,8 +851,10 @@ test("mobile detail keeps download as the primary action", async ({ page }, test
     await page.getByLabel("Open tasks").click();
     const drawer = page.getByRole("dialog");
     const input = drawer.getByLabel("Supported link");
+    await expect(input).toBeEnabled();
     await input.fill("https://example.test/user/status/7001");
     await input.press("Enter");
+    await expect(input).toHaveValue("");
 
     await expect(page.getByTestId("resource-detail")).toBeVisible();
     await expect(page.getByRole("button", { name: "Download", exact: true })).toBeVisible();

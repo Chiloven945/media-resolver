@@ -1,3 +1,17 @@
+const runtimeEnvironment = (
+        globalThis as {
+            process?: {
+                env?: Record<string, string | undefined>;
+            };
+        }
+).process?.env ?? {};
+
+const baseURL = runtimeEnvironment.NUXT_APP_BASE_URL || "/";
+const buildHash = runtimeEnvironment.NUXT_PUBLIC_BUILD_HASH
+        || runtimeEnvironment.GITHUB_SHA
+        || "development";
+const resolverEndpoint = runtimeEnvironment.NUXT_PUBLIC_RESOLVER_ENDPOINT || "";
+
 export default defineNuxtConfig({
     ssr: false,
     devtools: { enabled: false },
@@ -15,7 +29,7 @@ export default defineNuxtConfig({
     },
 
     app: {
-        baseURL: "/",
+        baseURL,
         head: {
             title: "Media Resolver",
             meta: [
@@ -30,8 +44,8 @@ export default defineNuxtConfig({
 
     runtimeConfig: {
         public: {
-            buildHash: "development",
-            resolverEndpoint: ""
+            buildHash,
+            resolverEndpoint
         }
     },
 
