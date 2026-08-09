@@ -1,5 +1,5 @@
-use crate::{error::ResolveError, model::InputDescriptor, protocol::remote::RemoteAdapter};
+use crate::{error::ResolveError, model::InputDescriptor, protocol::source};
 
 pub(crate) fn inspect(input: &str) -> Result<InputDescriptor, ResolveError> {
-    RemoteAdapter::inspect(input)
+    source::inspect_source(input)
 }

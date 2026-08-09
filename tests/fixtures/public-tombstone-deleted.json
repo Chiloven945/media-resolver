@@ -1,0 +1,9 @@
+{
+  "code": 200,
+  "status": {
+    "type": "tombstone",
+    "provider": "twitter",
+    "reason": "deleted",
+    "message": "Unavailable"
+  }
+}

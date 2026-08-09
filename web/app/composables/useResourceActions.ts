@@ -1,40 +1,22 @@
-export function useResourceActions() {
-    const copy = async (url: string) => {
-        const parsed = requireHttps(url);
-        await navigator.clipboard.writeText(parsed.toString());
-    };
+import type { ResourceItem, ResourceVariant } from "~/types/engine";
+import { resourceFilename } from "~/utils/resource-filename";
 
+export function useResourceActions() {
     const open = (url: string) => {
         const parsed = requireHttps(url);
         window.open(parsed.toString(), "_blank", "noopener,noreferrer");
     };
 
-    const saveIfSupported = async (url: string): Promise<"saved" | "opened"> => {
-        try {
-            const parsed = requireHttps(url);
-            const response = await fetch(parsed.toString(), { mode: "cors" });
-            if (!response.ok) {
-                throw new Error("save request failed");
-            }
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            const anchor = document.createElement("a");
-            anchor.href = objectUrl;
-            anchor.download = parsed.pathname.split("/").pop() || "resource";
-            anchor.rel = "noopener noreferrer";
-            anchor.click();
-            URL.revokeObjectURL(objectUrl);
-            return "saved";
-        } catch {
-            open(url);
-            return "opened";
-        }
-    };
+    const filename = (
+            resource: ResourceItem,
+            resourceIndex: number,
+            variant?: ResourceVariant
+    ) => resourceFilename(resource, resourceIndex, variant);
 
-    return { copy, open, saveIfSupported };
+    return { open, filename };
 }
 
-function requireHttps(url: string) {
+export function requireHttps(url: string): URL {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:") {
         throw new Error("unsupported resource protocol");

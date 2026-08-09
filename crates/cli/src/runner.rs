@@ -1,14 +1,13 @@
-use std::time::Duration;
+use std::{env, time::Duration};
 
 use futures::{StreamExt, stream};
-use media_resolver_core::ResolveError;
-use media_resolver_core::ResourceBundle;
-use media_resolver_core::inspect_input;
-use media_resolver_core::prepare_request;
-use media_resolver_core::process_response;
+use media_resolver_core::{
+    ResolutionOptions, ResolutionStep, ResolveError, ResolveFailure, ResourceBundle,
+    RuntimeProfile, accept_response, accept_transport_failure, start_resolution,
+};
 use serde::Serialize;
 
-use crate::client::{RemoteClient, TransportError};
+use crate::client::RemoteClient;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -19,7 +18,7 @@ pub enum ResultState {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PublicFailure {
-    pub code: &'static str,
+    pub code: String,
     pub message: String,
 }
 
@@ -35,18 +34,12 @@ pub struct ResolveResult {
 
 enum TaskFailure {
     Resolve(ResolveError),
-    Transport,
+    Final(ResolveFailure),
 }
 
 impl From<ResolveError> for TaskFailure {
     fn from(value: ResolveError) -> Self {
         Self::Resolve(value)
-    }
-}
-
-impl From<TransportError> for TaskFailure {
-    fn from(_value: TransportError) -> Self {
-        Self::Transport
     }
 }
 
@@ -57,11 +50,16 @@ pub async fn run(
     verbose: bool,
 ) -> Result<Vec<ResolveResult>, reqwest::Error> {
     let client = RemoteClient::new(timeout)?;
+    let gateway_endpoint = env::var("MEDIA_RESOLVER_GATEWAY_ENDPOINT")
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty());
     let mut output = stream::iter(inputs.into_iter().enumerate())
         .map(|(index, input)| {
             let client = client.clone();
+            let gateway_endpoint = gateway_endpoint.clone();
             async move {
-                let result = resolve_one(&client, input, verbose).await;
+                let result = resolve_one(&client, input, gateway_endpoint, verbose).await;
                 (index, result)
             }
         })
@@ -73,24 +71,61 @@ pub async fn run(
     Ok(output.into_iter().map(|(_, result)| result).collect())
 }
 
-async fn resolve_one(client: &RemoteClient, input: String, verbose: bool) -> ResolveResult {
+async fn resolve_one(
+    client: &RemoteClient,
+    input: String,
+    gateway_endpoint: Option<String>,
+    verbose: bool,
+) -> ResolveResult {
     if verbose {
         eprintln!("starting task");
     }
 
     let result: Result<ResourceBundle, TaskFailure> = async {
-        let descriptor = inspect_input(&input)?;
-        let request = prepare_request(&descriptor)?;
-        if verbose {
-            eprintln!("request prepared for source {}", descriptor.source_key);
-        }
+        let mut step = start_resolution(
+            &input,
+            ResolutionOptions {
+                profile: RuntimeProfile::Native,
+                gateway_endpoint,
+            },
+        )?;
 
-        let (status, body) = client.execute(&request).await?;
-        if verbose {
-            eprintln!("remote response received with status {status}");
+        loop {
+            match step {
+                ResolutionStep::Request {
+                    session,
+                    request,
+                    source_key,
+                    ..
+                } => {
+                    if verbose {
+                        eprintln!(
+                            "request {} prepared for source {}",
+                            request.route_key, source_key
+                        );
+                    }
+                    step = match client.execute(&request).await {
+                        Ok((status, body)) => {
+                            if verbose {
+                                eprintln!(
+                                    "request {} completed with status {}",
+                                    request.route_key, status
+                                );
+                            }
+                            accept_response(session, status, &body)?
+                        }
+                        Err(error) => {
+                            if verbose {
+                                eprintln!("request {} transport failed", request.route_key);
+                            }
+                            accept_transport_failure(session, error.as_core_failure())?
+                        }
+                    };
+                }
+                ResolutionStep::Resolved { result } => break Ok(result),
+                ResolutionStep::Failed { error } => break Err(TaskFailure::Final(error)),
+            }
         }
-
-        Ok(process_response(&descriptor, status, &body)?)
     }
     .await;
 
@@ -113,12 +148,12 @@ async fn resolve_one(client: &RemoteClient, input: String, verbose: bool) -> Res
 fn public_failure(error: TaskFailure) -> PublicFailure {
     match error {
         TaskFailure::Resolve(error) => PublicFailure {
-            code: error.code().as_str(),
+            code: error.code().as_str().to_owned(),
             message: error.to_string(),
         },
-        TaskFailure::Transport => PublicFailure {
-            code: "network_error",
-            message: "the source could not be reached".to_owned(),
+        TaskFailure::Final(error) => PublicFailure {
+            code: error.code.as_str().to_owned(),
+            message: error.message,
         },
     }
 }

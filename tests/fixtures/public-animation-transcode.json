@@ -1,0 +1,20 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "media": {
+      "all": [
+        {
+          "id": "animation-transcode",
+          "type": "gif",
+          "url": "https://pbs.twimg.com/media/animation.jpg",
+          "width": 480,
+          "height": 270,
+          "transcode_url": "https://video.twimg.com/tweet_video/animation.mp4"
+        }
+      ],
+      "photos": [],
+      "videos": []
+    }
+  }
+}

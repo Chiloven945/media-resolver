@@ -1,3 +1,5 @@
-pub(crate) mod remote;
-pub(crate) mod request;
-pub(crate) mod response;
+pub(crate) mod adapter;
+pub(crate) mod registry;
+pub(crate) mod routes;
+pub(crate) mod schema;
+pub(crate) mod source;

@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "media": {
+      "all": [
+        {
+          "id": "v1",
+          "type": "video",
+          "url": "https://video.twimg.com/ext_tw_video/example/vid/avc1/1280x720/base.mp4",
+          "width": 1920,
+          "height": 1080,
+          "thumbnail_url": "https://pbs.twimg.com/media/video-preview.jpg",
+          "duration": 12.345,
+          "filesize": 14000000,
+          "formats": [
+            {
+              "container": "m3u8",
+              "url": "https://video.twimg.com/ext_tw_video/example/pl/playlist.m3u8",
+              "width": 1920,
+              "height": 1080
+            },
+            {
+              "container": "webm",
+              "codec": "vp9",
+              "bitrate": 5200000,
+              "url": "https://video.twimg.com/ext_tw_video/example/vid/vp9/1920x1080/video.webm",
+              "size": 12000000,
+              "width": 1920,
+              "height": 1080
+            },
+            {
+              "container": "mp4",
+              "codec": "h264",
+              "bitrate": 2176000,
+              "url": "https://video.twimg.com/ext_tw_video/example/vid/avc1/1280x720/video.mp4",
+              "size": 8400000,
+              "width": 1280,
+              "height": 720
+            }
+          ]
+        }
+      ],
+      "photos": [],
+      "videos": []
+    }
+  }
+}

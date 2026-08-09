@@ -1,31 +1,21 @@
-export type EngineState = "idle" | "loading" | "ready" | "error"
+import type {
+    ResolutionOptions,
+    ResolutionSession,
+    ResolutionStep,
+    TransportFailureKind
+} from "./resolution";
 
-export type RequestMethod = "GET"
+export type EngineState = "idle" | "loading" | "ready" | "error";
 
-export interface RequestHeader {
-    name: string;
-    value: string;
-}
-
-export interface PreparedRequest {
-    key: string;
-    url: string;
-    method: RequestMethod;
-    headers?: RequestHeader[];
-}
-
-export interface PreparedInput {
-    key: string;
-    normalizedInput: string;
-    request: PreparedRequest;
-}
-
-export type ResourceKind = "image" | "video" | "animation" | "unknown"
+export type ResourceKind = "image" | "video" | "animation" | "unknown";
 
 export interface ResourceVariant {
     url: string;
     mimeType?: string;
+    container?: string;
+    codec?: string;
     bitrate?: number;
+    sizeBytes?: number;
     width?: number;
     height?: number;
 }
@@ -53,7 +43,16 @@ export interface EngineErrorShape {
 }
 
 export interface EngineRuntime {
-    prepare(input: string): PreparedInput;
+    start(input: string, options: ResolutionOptions): ResolutionStep;
 
-    complete(input: string, status: number, body: Uint8Array): ResourceBundle;
+    respond(
+            session: ResolutionSession,
+            status: number,
+            body: Uint8Array
+    ): ResolutionStep;
+
+    transportFailed(
+            session: ResolutionSession,
+            kind: TransportFailureKind
+    ): ResolutionStep;
 }

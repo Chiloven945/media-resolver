@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ResolveTask } from "~/types/task";
 
@@ -16,9 +16,13 @@ const summary = computed(() => {
         ? "resource"
         : "resources"}`;
   }
-  return props.task.state === "failed"
-      ? "Needs attention"
-      : "Task in progress";
+  if (props.task.state === "failed") {
+    return "Needs attention";
+  }
+  if (props.task.state === "cancelled") {
+    return "Cancelled";
+  }
+  return "Task in progress";
 });
 
 const selectTask = () => {
@@ -36,21 +40,18 @@ const menuItems = computed(() => {
     });
   } else if (props.task.state === "ready") {
     actions.push({
-      label: "Run again", icon: "i-lucide-refresh-cw", onSelect: () => {
+      label: "Run again",
+      icon: "i-lucide-refresh-cw",
+      onSelect: () => {
         queue.retry(props.task.id);
         toast.add({ title: "Retry started", color: "neutral" });
       }
     });
-  } else if (props.task.state === "failed" && props.task.error?.code === "browser_blocked") {
-    actions.push({
-      label: "Open response", icon: "i-lucide-external-link", onSelect: () => {
-        select(props.task.id);
-        queue.openResponse(props.task.id);
-      }
-    });
   } else if (props.task.state === "failed" || props.task.state === "cancelled") {
     actions.push({
-      label: "Retry", icon: "i-lucide-refresh-cw", onSelect: () => {
+      label: "Retry",
+      icon: "i-lucide-refresh-cw",
+      onSelect: () => {
         queue.retry(props.task.id);
         toast.add({ title: "Retry started", color: "neutral" });
       }
@@ -59,7 +60,10 @@ const menuItems = computed(() => {
 
   if (props.task.state !== "connecting" && props.task.state !== "processing") {
     actions.push({
-      label: "Remove", icon: "i-lucide-trash-2", color: "error", onSelect: () => {
+      label: "Remove",
+      icon: "i-lucide-trash-2",
+      color: "error",
+      onSelect: () => {
         queue.remove(props.task.id);
         toast.add({ title: "Task removed", color: "neutral" });
       }
@@ -72,14 +76,14 @@ const menuItems = computed(() => {
 
 <template>
   <div
+      :class="isSelected ? 'border-primary bg-elevated' : 'border-transparent hover:bg-elevated/70'"
       :data-task-sequence="task.sequence"
-      class="flex items-center gap-1 rounded-xl p-1 transition-colors"
-      :class="isSelected ? 'bg-primary/10 ring-1 ring-primary/20' : 'hover:bg-elevated/60'"
+      class="flex items-stretch border-l-2 transition-colors"
   >
     <UButton
+        class="min-w-0 flex-1 justify-start px-3 py-2.5"
         color="neutral"
         variant="ghost"
-        class="min-w-0 flex-1 justify-start px-2 py-2.5"
         @click="selectTask"
     >
       <div class="min-w-0 flex-1 text-left">
@@ -94,11 +98,13 @@ const menuItems = computed(() => {
     </UButton>
 
     <UDropdownMenu :items="menuItems">
-      <UButton icon="i-lucide-ellipsis-vertical"
-               color="neutral"
-               variant="ghost"
-               size="sm"
-               aria-label="Task actions"/>
+      <UButton
+          aria-label="Task actions"
+          color="neutral"
+          icon="i-lucide-ellipsis-vertical"
+          size="sm"
+          variant="ghost"
+      />
     </UDropdownMenu>
   </div>
 </template>

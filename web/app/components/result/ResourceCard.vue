@@ -1,58 +1,84 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ResourceItem } from "~/types/engine";
+import { displayDimensions, formatSummary, resourceKindLabel } from "~/utils/resource-format";
 import VariantList from "~/components/result/VariantList.vue";
-import ResourcePreview from "~/components/result/ResourcePreview.vue";
+import ResourceViewer from "~/components/result/ResourceViewer.vue";
 
-const props = defineProps<{ resource: ResourceItem }>();
+const props = defineProps<{
+  resource: ResourceItem;
+  sourceKey: string;
+  resourceIndex: number;
+}>();
 const variantsOpen = ref(false);
 const toast = useToast();
 const actions = useResourceActions();
+const downloads = useDownloadManager();
 
-const label = computed(() => (
-    {
-      image: "Image",
-      video: "Video",
-      animation: "Animation",
-      unknown: "Resource"
-    }[props.resource.kind]
+const preferredIndex = computed(() => {
+  const index = props.resource.variants.findIndex(variant => variant.url
+      === props.resource.preferredUrl);
+  return index >= 0
+      ? index
+      : undefined;
+});
+const preferred = computed(() => preferredIndex.value === undefined
+    ? undefined
+    : props.resource.variants[preferredIndex.value]);
+const displayVariant = computed(() => preferred.value || props.resource.variants[0]);
+const downloadKey = computed(() => downloads.keyFor(
+    props.sourceKey,
+    props.resource.id,
+    preferredIndex.value
 ));
+const downloadState = computed(() => downloads.stateFor(downloadKey.value));
+const busy = computed(() => ["preparing", "downloading"].includes(downloadState.value.state));
+const downloadLabel = computed(() => {
+  if (downloadState.value.state === "preparing") {
+    return "Preparing…";
+  }
+  if (downloadState.value.state === "downloading") {
+    return downloadState.value.progress === undefined
+        ? "Downloading…"
+        : `Downloading ${downloadState.value.progress}%`;
+  }
+  if (downloadState.value.state === "completed") {
+    return "Downloaded";
+  }
+  return "Download";
+});
 
-const dimensions = computed(() => props.resource.width && props.resource.height
-    ? `${props.resource.width}×${props.resource.height}`
-    : "Original size");
-
-const preferred = computed(() => props.resource.variants.find(variant => variant.url
-        === props.resource.preferredUrl)
-    || props.resource.variants[0]);
-const bitrate = computed(() => preferred.value?.bitrate
-    ? `${(
-        preferred.value.bitrate / 1_000_000
-    ).toFixed(1)} Mbps`
-    : "");
-
-const copy = async () => {
-  await actions.copy(props.resource.preferredUrl);
-  toast.add({
-    title: "Copied",
-    description: "Resource address copied to clipboard.",
-    color: "success"
+const startDownload = async () => {
+  const result = await downloads.download(props.sourceKey, props.resource, {
+    resourceIndex: props.resourceIndex,
+    variant: preferred.value,
+    variantIndex: preferredIndex.value
   });
+  if (result === "downloaded") {
+    toast.add({ title: "Resource downloaded", color: "success" });
+  } else if (result === "failed") {
+    toast.add({
+      title: "Download unavailable",
+      description: "Use Open externally to access this resource.",
+      color: "error"
+    });
+  }
 };
 
 const menuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: "Open resource",
+      label: "Open externally",
       icon: "i-lucide-external-link",
       onSelect: () => actions.open(props.resource.preferredUrl)
     },
-    { label: "Copy address", icon: "i-lucide-copy", onSelect: copy },
     ...(
         props.resource.variants.length > 1
             ? [
               {
-                label: "View variants", icon: "i-lucide-list-tree", onSelect: () => {
+                label: "View variants",
+                icon: "i-lucide-list-tree",
+                onSelect: () => {
                   variantsOpen.value = true;
                 }
               }
@@ -64,54 +90,70 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
 </script>
 
 <template>
-  <UCard :ui="{ body: 'p-0 sm:p-0', footer: 'p-4 sm:px-4' }" class="overflow-hidden">
-    <ResourcePreview :resource="resource"/>
+  <UCard
+      :ui="{ body: 'p-0 sm:p-0', footer: 'p-3 sm:px-3' }"
+      class="overflow-hidden"
+      data-testid="resource-card"
+  >
+    <ResourceViewer :resource="resource" compact/>
 
-    <div class="space-y-4 p-4">
+    <div class="space-y-2 p-3">
       <div class="flex items-start justify-between gap-3">
-        <div>
-          <div class="flex items-center gap-2">
-            <UBadge color="neutral" variant="subtle">{{ label }}</UBadge>
-            <span class="text-sm font-medium text-highlighted">{{ dimensions }}</span>
+        <div class="min-w-0">
+          <div class="truncate text-sm font-semibold text-highlighted">
+            {{ resourceKindLabel(resource.kind) }} · {{
+              displayDimensions(resource.width, resource.height)
+            }}
           </div>
-          <p v-if="bitrate" class="mt-2 text-xs text-muted">{{ bitrate }}</p>
+          <p v-if="formatSummary(displayVariant)" class="mt-1 truncate text-xs text-muted">
+            {{ formatSummary(displayVariant) }}
+          </p>
         </div>
-        <UBadge v-if="resource.variants.length > 1" color="primary" variant="subtle">
+        <span v-if="resource.variants.length > 1" class="shrink-0 text-xs text-muted">
           {{ resource.variants.length }} variants
-        </UBadge>
+        </span>
       </div>
+      <UProgress
+          v-if="downloadState.state === 'downloading'"
+          :animation="downloadState.progress === undefined ? 'carousel' : undefined"
+          :model-value="downloadState.progress"
+          size="xs"
+      />
     </div>
 
     <template #footer>
       <div class="flex items-center gap-2">
         <UButton
-            label="Open"
-            icon="i-lucide-external-link"
-            color="neutral"
-            variant="outline"
+            :disabled="busy"
+            :icon="busy ? 'i-lucide-loader-circle' : 'i-lucide-download'"
+            :label="downloadLabel"
+            :loading="busy"
             class="flex-1"
-            @click="actions.open(resource.preferredUrl)"
-        />
-        <UButton
-            label="Copy"
-            icon="i-lucide-copy"
-            class="flex-1"
-            @click="copy"
+            @click="startDownload"
         />
         <UDropdownMenu :items="menuItems">
-          <UButton icon="i-lucide-ellipsis"
-                   color="neutral"
-                   variant="ghost"
-                   aria-label="Resource actions"/>
+          <UButton
+              aria-label="Resource actions"
+              color="neutral"
+              icon="i-lucide-ellipsis"
+              variant="ghost"
+          />
         </UDropdownMenu>
       </div>
     </template>
   </UCard>
 
-  <UModal v-model:open="variantsOpen" title="Resource variants"
-          description="Choose an available representation of this resource.">
+  <UModal
+      v-model:open="variantsOpen"
+      description="Choose an available representation of this resource."
+      title="Resource variants"
+  >
     <template #body>
-      <VariantList :variants="resource.variants"/>
+      <VariantList
+          :resource="resource"
+          :resource-index="resourceIndex"
+          :source-key="sourceKey"
+      />
     </template>
   </UModal>
 </template>

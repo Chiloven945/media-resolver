@@ -1,10 +1,10 @@
+import type { EngineErrorShape, EngineRuntime, EngineState } from "~/types/engine";
 import type {
-    EngineErrorShape,
-    EngineRuntime,
-    EngineState,
-    PreparedInput,
-    ResourceBundle
-} from "~/types/engine";
+    ResolutionOptions,
+    ResolutionSession,
+    ResolutionStep,
+    TransportFailureKind
+} from "~/types/resolution";
 
 const runtime = shallowRef<EngineRuntime | null>(null);
 
@@ -15,19 +15,26 @@ export function installEngineRuntime(value: EngineRuntime | null) {
 export function useEngine() {
     const state = useState<EngineState>("engine:state", () => "idle");
 
-    const prepare = (input: string): PreparedInput => {
+    const requireRuntime = (): EngineRuntime => {
         if (state.value !== "ready" || !runtime.value) {
             throw { code: "internal" };
         }
-        return runtime.value.prepare(input);
+        return runtime.value;
     };
 
-    const complete = (input: string, status: number, body: Uint8Array): ResourceBundle => {
-        if (state.value !== "ready" || !runtime.value) {
-            throw { code: "internal" };
-        }
-        return runtime.value.complete(input, status, body);
-    };
+    const start = (input: string, options: ResolutionOptions): ResolutionStep =>
+            requireRuntime().start(input, options);
+
+    const respond = (
+            session: ResolutionSession,
+            status: number,
+            body: Uint8Array
+    ): ResolutionStep => requireRuntime().respond(session, status, body);
+
+    const transportFailed = (
+            session: ResolutionSession,
+            kind: TransportFailureKind
+    ): ResolutionStep => requireRuntime().transportFailed(session, kind);
 
     const normalizeError = (error: unknown): EngineErrorShape => {
         if (error && typeof error === "object") {
@@ -47,8 +54,9 @@ export function useEngine() {
     return {
         state: readonly(state),
         runtime: readonly(runtime),
-        prepare,
-        complete,
+        start,
+        respond,
+        transportFailed,
         normalizeError
     };
 }

@@ -1,0 +1,9 @@
+{
+  "mediaDetails": [
+    {
+      "media_url_https": "https://pbs.twimg.com/media/embed-example.jpg",
+      "type": "photo",
+      "original_info": {"width": 2048, "height": 1365}
+    }
+  ]
+}

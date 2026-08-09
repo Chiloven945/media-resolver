@@ -100,8 +100,9 @@ pub fn print_human(results: &[ResolveResult], color: bool) {
 fn print_bundle(bundle: &ResourceBundle) {
     for resource in &bundle.resources {
         println!("{}", resource.preferred_url);
-        (&resource.variants)
-            .into_iter()
+        resource
+            .variants
+            .iter()
             .filter(|v| v.url != resource.preferred_url)
             .for_each(|variant| println!("{}", variant.url));
     }

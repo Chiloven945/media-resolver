@@ -2,19 +2,22 @@ import { describe, expect, it } from "vitest";
 import { getPublicErrorMessage } from "../app/types/task";
 
 describe("public error copy", () => {
-    it("maps remote errors to neutral UI text", () => {
-        expect(getPublicErrorMessage("remote_not_found")).toEqual({
+    it("maps unavailable sources to neutral UI text", () => {
+        expect(getPublicErrorMessage("remote_unavailable")).toEqual({
             title: "Source unavailable",
-            description: "The source is no longer available."
+            description: "This source isn't available through the current access methods."
         });
     });
 
-
-    it("explains the browser-only fallback without exposing implementation details", () => {
-        expect(getPublicErrorMessage("browser_blocked")).toEqual({
-            title: "Direct access blocked",
-            description: "Your browser cannot read this response directly. Open the response in a new tab, copy it, then continue here."
+    it("distinguishes restricted access without exposing provider details", () => {
+        expect(getPublicErrorMessage("remote_restricted")).toEqual({
+            title: "Access unavailable",
+            description: "This source requires access that isn't available in the current session."
         });
+    });
+
+    it("maps final transport exhaustion to a neutral network error", () => {
+        expect(getPublicErrorMessage("network_unavailable").title).toBe("Network unavailable");
     });
 
     it("uses a safe fallback", () => {

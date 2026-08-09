@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "media": {
+      "all": [],
+      "photos": [],
+      "videos": [
+        {
+          "id": "v-fallback",
+          "type": "video",
+          "url": "https://video.twimg.com/ext_tw_video/fallback/vid/1280x720/fallback.mp4",
+          "width": 1280,
+          "height": 720,
+          "thumbnail_url": "https://pbs.twimg.com/ext_tw_video_thumb/fallback.jpg",
+          "duration": 3.5,
+          "formats": [
+            {
+              "container": "mp4",
+              "codec": "h264",
+              "bitrate": 2200000,
+              "url": "https://video.twimg.com/ext_tw_video/fallback/vid/1280x720/fallback.mp4",
+              "size": 900000,
+              "width": 1280,
+              "height": 720
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

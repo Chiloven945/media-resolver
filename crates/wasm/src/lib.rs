@@ -1,14 +1,9 @@
-use media_resolver_core::{ResolveError, inspect_input, prepare_request, process_response};
+use media_resolver_core::{
+    ResolutionOptions, ResolutionSession, ResolveError, TransportFailure, accept_response,
+    accept_transport_failure, start_resolution,
+};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PrepareResult {
-    key: String,
-    normalized_input: String,
-    request: media_resolver_core::PreparedRequest,
-}
 
 #[derive(Debug, Serialize)]
 struct PublicError<'a> {
@@ -17,22 +12,37 @@ struct PublicError<'a> {
 }
 
 #[wasm_bindgen]
-pub fn prepare(input: &str) -> Result<JsValue, JsValue> {
-    let descriptor = inspect_input(input).map_err(to_js_error)?;
-    let request = prepare_request(&descriptor).map_err(to_js_error)?;
-    serde_wasm_bindgen::to_value(&PrepareResult {
-        key: descriptor.source_key,
-        normalized_input: descriptor.normalized_input,
-        request,
-    })
-    .map_err(|_| to_js_error(ResolveError::Internal))
+pub fn start(input: &str, options: JsValue) -> Result<JsValue, JsValue> {
+    let options: ResolutionOptions =
+        serde_wasm_bindgen::from_value(options).map_err(|_| to_js_error(ResolveError::Internal))?;
+    let step = start_resolution(input, options).map_err(to_js_error)?;
+    serialize_step(&step)
 }
 
 #[wasm_bindgen]
-pub fn complete(input: &str, status: u16, body: &[u8]) -> Result<JsValue, JsValue> {
-    let descriptor = inspect_input(input).map_err(to_js_error)?;
-    let result = process_response(&descriptor, status, body).map_err(to_js_error)?;
-    serde_wasm_bindgen::to_value(&result).map_err(|_| to_js_error(ResolveError::Internal))
+pub fn respond(session: JsValue, status: u16, body: &[u8]) -> Result<JsValue, JsValue> {
+    let session: ResolutionSession =
+        serde_wasm_bindgen::from_value(session).map_err(|_| to_js_error(ResolveError::Internal))?;
+    let step = accept_response(session, status, body).map_err(to_js_error)?;
+    serialize_step(&step)
+}
+
+#[wasm_bindgen]
+pub fn transport_failed(session: JsValue, kind: &str) -> Result<JsValue, JsValue> {
+    let session: ResolutionSession =
+        serde_wasm_bindgen::from_value(session).map_err(|_| to_js_error(ResolveError::Internal))?;
+    let failure = match kind {
+        "network" => TransportFailure::Network,
+        "access_blocked" => TransportFailure::AccessBlocked,
+        "timeout" => TransportFailure::Timeout,
+        _ => return Err(to_js_error(ResolveError::Internal)),
+    };
+    let step = accept_transport_failure(session, failure).map_err(to_js_error)?;
+    serialize_step(&step)
+}
+
+fn serialize_step(step: &media_resolver_core::ResolutionStep) -> Result<JsValue, JsValue> {
+    serde_wasm_bindgen::to_value(step).map_err(|_| to_js_error(ResolveError::Internal))
 }
 
 fn to_js_error(error: ResolveError) -> JsValue {

@@ -1,19 +1,9 @@
-<script setup lang="ts">
-const emit = defineEmits<{ newTask: [] }>();
-</script>
-
 <template>
-  <div class="flex min-h-[calc(100dvh-var(--ui-header-height))] items-center justify-center p-6">
-    <UEmpty
-        icon="i-lucide-orbit"
-        title="No active tasks"
-        description="Add a supported link to start. Processing happens locally when possible."
-        variant="subtle"
-        class="w-full max-w-xl"
-    >
-      <template #actions>
-        <UButton label="New task" icon="i-lucide-plus" @click="emit('newTask')"/>
-      </template>
-    </UEmpty>
+  <div class="flex h-full min-h-96 items-center justify-center p-6 text-center">
+    <div class="max-w-sm">
+      <UIcon class="mx-auto size-7 text-muted" name="i-lucide-layout-panel-top"/>
+      <h1 class="mt-4 text-base font-semibold text-highlighted">No task selected</h1>
+      <p class="mt-2 text-sm leading-6 text-muted">Choose an existing task or create a new one.</p>
+    </div>
   </div>
 </template>

@@ -2,8 +2,8 @@
 @import "@nuxt/ui";
 
 :root {
-    --ui-radius: 0.75rem;
-    --ui-header-height: 3.75rem;
+    --ui-header-height: 3.5rem;
+    --result-header-height: 4.75rem;
 }
 
 html,
@@ -14,8 +14,7 @@ body,
 
 body {
     margin: 0;
-    background: radial-gradient(circle at 15% -10%, color-mix(in srgb, var(--ui-primary) 10%, transparent), transparent 35rem),
-    var(--ui-bg);
+    background: var(--ui-bg);
 }
 
 * {
@@ -23,15 +22,43 @@ body {
     scrollbar-color: color-mix(in srgb, var(--ui-text-muted) 28%, transparent) transparent;
 }
 
-.resource-media {
-    aspect-ratio: 16 / 10;
-    width: 100%;
+.app-shell {
+    height: 100dvh;
+    min-height: 100dvh;
     overflow: hidden;
-    background: var(--ui-bg-muted);
 }
 
+/*
+ * UDashboardGroup is fixed/inset-0 by default because Nuxt UI assumes it is
+ * the viewport root. In this app it lives below UHeader, so it must
+ * participate in AppShell's flex flow instead.
+ */
 .workspace-grid {
-    min-height: 100dvh;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    min-height: 0;
+    flex: 1 1 0%;
+}
+
+.resource-viewer-stage {
+    width: 100%;
+    min-height: min(
+            18rem,
+            calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 1rem)
+    );
+    height: min(
+            56dvh,
+            32rem,
+            calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 1rem)
+    );
+    max-height: 32rem;
+}
+
+.resource-viewer-media {
+    max-width: min(100%, 72rem);
+    max-height: calc(100% - 1rem);
+    object-fit: contain;
 }
 
 @media (max-width: 1023px) {
@@ -42,7 +69,36 @@ body {
 
 @media (min-width: 1024px) {
     .desktop-task-panel {
-        min-width: 20rem;
+        min-width: 17.5rem;
         max-width: 23.75rem;
     }
+
+    /*
+     * A single resource should be prominent without consuming the whole
+     * viewport. The inspector remains alongside it while the result body can
+     * scroll if either side needs more vertical space.
+     */
+    .resource-viewer-stage {
+        min-height: min(
+                24rem,
+                calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 2rem)
+        );
+        height: min(
+                62dvh,
+                42rem,
+                calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 2rem)
+        );
+        max-height: 42rem;
+    }
+}
+
+.resource-viewer-stage[data-compact="true"] {
+    min-height: 14rem;
+    height: 16rem;
+    max-height: 16rem;
+}
+
+.resource-viewer-stage[data-compact="true"] .resource-viewer-media {
+    max-width: 100%;
+    max-height: 100%;
 }

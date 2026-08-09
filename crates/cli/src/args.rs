@@ -20,7 +20,8 @@ fn parse_jobs(value: &str) -> Result<usize, String> {
 fn parse_timeout(value: &str) -> Result<u64, String> {
     let timeout = value.parse::<u64>().map_err(|_| {
         format!(
-            "timeout must be an integer between {MIN_TIMEOUT_SECONDS} and {MAX_TIMEOUT_SECONDS} seconds"
+            "timeout must be an integer between {MIN_TIMEOUT_SECONDS} and \
+             {MAX_TIMEOUT_SECONDS} seconds"
         )
     })?;
 

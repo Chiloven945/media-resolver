@@ -1,4 +1,4 @@
-import type { PreparedRequest, ResourceBundle } from "~/types/engine";
+import type { ResourceBundle } from "~/types/engine";
 import type { ResolveTask, TaskError } from "~/types/task";
 
 interface CacheEntry {
@@ -25,8 +25,6 @@ export interface CompleteFromResponseResult {
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const MAX_RETRIES = 2;
-const RETRY_DELAYS = [500, 1500];
 const cache = new Map<string, CacheEntry>();
 const controllers = new Map<string, AbortController>();
 let settingsWatcherInstalled = false;
@@ -37,7 +35,7 @@ export function useTaskQueue() {
     const sequence = useState<number>("tasks:sequence", () => 0);
     const { settings } = useAppSettings();
     const { select } = useTaskSelection();
-    const engine = useEngine();
+    const executor = useResolverExecutor();
 
     const queuedCount = computed(() => tasks.value.filter(task => task.state === "queued").length);
     const completedCount = computed(() => tasks.value.filter(task =>
@@ -54,15 +52,15 @@ export function useTaskQueue() {
             return { status: "invalid" };
         }
 
-        let prepared;
+        let inspected;
         try {
-            prepared = engine.prepare(value);
+            inspected = executor.inspect(value);
         } catch (error) {
-            return { status: "invalid", errorCode: engine.normalizeError(error).code };
+            return { status: "invalid", errorCode: executor.errorCode(error) };
         }
 
         const duplicate = tasks.value.find(task =>
-                task.sourceKey === prepared.key
+                task.sourceKey === inspected.sourceKey
                 && ["queued", "connecting", "processing", "ready"].includes(task.state)
         );
         if (duplicate) {
@@ -73,13 +71,13 @@ export function useTaskQueue() {
         }
 
         sequence.value += 1;
-        const cached = getCached(prepared.key);
+        const cached = getCached(inspected.sourceKey);
         const task: ResolveTask = {
             id: crypto.randomUUID(),
             sequence: sequence.value,
             input: value,
-            sourceKey: prepared.key,
-            normalizedInput: prepared.normalizedInput,
+            sourceKey: inspected.sourceKey,
+            normalizedInput: inspected.normalizedInput,
             state: cached
                     ? "ready"
                     : "queued",
@@ -132,6 +130,7 @@ export function useTaskQueue() {
         }
         controllers.get(task.id)?.abort();
         controllers.delete(task.id);
+        executor.clearRecovery(task.id);
         if (task.sourceKey) {
             cache.delete(task.sourceKey);
         }
@@ -167,6 +166,7 @@ export function useTaskQueue() {
         }
         controllers.get(id)?.abort();
         controllers.delete(id);
+        executor.clearRecovery(id);
         tasks.value.splice(index, 1);
         const selection = useTaskSelection();
         if (selection.selectedId.value === id) {
@@ -180,6 +180,9 @@ export function useTaskQueue() {
                         .filter(task => ["ready", "failed", "cancelled"].includes(task.state))
                         .map(task => task.id)
         );
+        for (const id of removable) {
+            executor.clearRecovery(id);
+        }
         tasks.value = tasks.value.filter(task => !removable.has(task.id));
         const selection = useTaskSelection();
         if (selection.selectedId.value && removable.has(selection.selectedId.value)) {
@@ -190,35 +193,21 @@ export function useTaskQueue() {
     const clearAll = () => {
         for (const task of tasks.value) {
             controllers.get(task.id)?.abort();
+            executor.clearRecovery(task.id);
         }
         controllers.clear();
         tasks.value = [];
         select(null);
     };
 
-    const openResponse = (id: string): boolean => {
-        const task = findTask(id);
-        if (!task || !import.meta.client) {
-            return false;
-        }
+    const canRecover = (id: string): boolean => executor.hasRecovery(id);
 
-        try {
-            const prepared = engine.prepare(task.input);
-            const url = new URL(prepared.request.url);
-            if (url.protocol !== "https:") {
-                return false;
-            }
-            window.open(url.toString(), "_blank", "noopener,noreferrer");
-            return true;
-        } catch {
-            return false;
-        }
-    };
+    const openResponse = (id: string): boolean => executor.openRecoveryResponse(id);
 
-    const completeFromResponse = (
+    const completeFromResponse = async (
             id: string,
             body: string
-    ): CompleteFromResponseResult => {
+    ): Promise<CompleteFromResponseResult> => {
         const task = findTask(id);
         if (!task) {
             return { status: "missing" };
@@ -238,8 +227,8 @@ export function useTaskQueue() {
         task.completedAt = undefined;
 
         try {
-            const bytes = new TextEncoder().encode(value);
-            const result = engine.complete(task.input, 200, bytes);
+            const result = executor.continueFromRecovery(task.id, value);
+            task.sourceKey = result.sourceKey || task.sourceKey;
             task.result = result;
             task.state = "ready";
             task.completedAt = Date.now();
@@ -248,8 +237,7 @@ export function useTaskQueue() {
             }
             return { status: "ready" };
         } catch (error) {
-            const normalized = engine.normalizeError(error);
-            const code = normalized.code || "invalid_response";
+            const code = executor.errorCode(error) || "invalid_response";
             task.error = { code } satisfies TaskError;
             task.state = "failed";
             task.completedAt = Date.now();
@@ -278,7 +266,7 @@ export function useTaskQueue() {
     }
 
     function pumpQueue() {
-        if (engine.state.value !== "ready") {
+        if (executor.state.value !== "ready") {
             return;
         }
         while (activeCount.value < settings.value.concurrency) {
@@ -308,63 +296,35 @@ export function useTaskQueue() {
         const controller = new AbortController();
         controllers.set(task.id, controller);
         task.startedAt = Date.now();
+        task.error = undefined;
 
         try {
-            const prepared = engine.prepare(task.input);
-            task.sourceKey = prepared.key;
-            task.normalizedInput = prepared.normalizedInput;
-
-            let response: Response | undefined;
-            let lastTransportError: unknown;
-            for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
-                if (controller.signal.aborted) {
-                    throw new DOMException("Aborted", "AbortError");
-                }
-                task.state = "connecting";
-                response = undefined;
-                try {
-                    response = await executeRequest(prepared.request, controller.signal);
-                    lastTransportError = undefined;
-                } catch (error) {
-                    lastTransportError = error;
-                    if (isAbort(error)) {
-                        throw error;
+            const resolved = await executor.resolve(
+                    task.id,
+                    task.input,
+                    controller.signal,
+                    phase => {
+                        if (!controller.signal.aborted) {
+                            task.state = phase;
+                        }
                     }
-                    if (isLikelyBrowserBlocked(error) || attempt >= MAX_RETRIES) {
-                        break;
-                    }
-                    await retryDelay(attempt, controller.signal);
-                    continue;
-                }
+            );
 
-                if (!isRetryableStatus(response.status) || attempt >= MAX_RETRIES) {
-                    break;
-                }
-                await retryDelay(attempt, controller.signal);
-            }
-
-            if (!response) {
-                throw lastTransportError || new TypeError("network failure");
-            }
-            task.state = "processing";
-            const body = new Uint8Array(await response.arrayBuffer());
-            const result = engine.complete(task.input, response.status, body);
             if (controller.signal.aborted) {
                 throw new DOMException("Aborted", "AbortError");
             }
 
-            task.result = result;
+            task.sourceKey = resolved.sourceKey;
+            task.normalizedInput = resolved.normalizedInput;
+            task.result = resolved.result;
             task.state = "ready";
-            task.error = undefined;
             task.completedAt = Date.now();
-            if (task.sourceKey) {
-                setCached(task.sourceKey, result);
-            }
+            setCached(resolved.sourceKey, resolved.result);
 
             if (import.meta.dev) {
                 console.debug("task completed", {
                     taskId: task.id,
-                    resources: result.resources.length,
+                    resources: resolved.result.resources.length,
                     durationMs: task.startedAt
                             ? Date.now() - task.startedAt
                             : undefined
@@ -379,12 +339,7 @@ export function useTaskQueue() {
                 return;
             }
 
-            const engineError = engine.normalizeError(error);
-            const code = isLikelyBrowserBlocked(error)
-                    ? "browser_blocked"
-                    : error instanceof TypeError
-                            ? "network_error"
-                            : engineError.code || "internal";
+            const code = executor.errorCode(error);
             task.error = { code } satisfies TaskError;
             task.state = "failed";
             task.completedAt = Date.now();
@@ -400,7 +355,7 @@ export function useTaskQueue() {
     if (import.meta.client && !settingsWatcherInstalled) {
         settingsWatcherInstalled = true;
         watch(() => settings.value.concurrency, () => pumpQueue());
-        watch(() => engine.state.value, state => {
+        watch(() => executor.state.value, state => {
             if (state === "ready") {
                 pumpQueue();
             }
@@ -420,6 +375,7 @@ export function useTaskQueue() {
         remove,
         clearCompleted,
         clearAll,
+        canRecover,
         openResponse,
         completeFromResponse,
         select,
@@ -427,47 +383,6 @@ export function useTaskQueue() {
     };
 }
 
-function isLikelyBrowserBlocked(error: unknown): boolean {
-    return import.meta.client
-            && error instanceof TypeError
-            && navigator.onLine;
-}
-
-async function executeRequest(request: PreparedRequest, signal: AbortSignal): Promise<Response> {
-    const headers = new Headers();
-    for (const header of request.headers || []) {
-        headers.set(header.name, header.value);
-    }
-    return fetch(request.url, {
-        method: request.method,
-        headers,
-        signal,
-        credentials: "omit",
-        redirect: "follow",
-        referrerPolicy: "no-referrer"
-    });
-}
-
-function isRetryableStatus(status: number) {
-    return status === 429 || [500, 502, 503, 504].includes(status);
-}
-
 function isAbort(error: unknown) {
     return error instanceof DOMException && error.name === "AbortError";
-}
-
-async function retryDelay(attempt: number, signal: AbortSignal) {
-    const base = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)] || 500;
-    const jitter = Math.floor(Math.random() * 180);
-    await new Promise<void>((resolve, reject) => {
-        const onAbort = () => {
-            window.clearTimeout(timer);
-            reject(new DOMException("Aborted", "AbortError"));
-        };
-        const timer = window.setTimeout(() => {
-            signal.removeEventListener("abort", onAbort);
-            resolve();
-        }, base + jitter);
-        signal.addEventListener("abort", onAbort, { once: true });
-    });
 }

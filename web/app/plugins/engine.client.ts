@@ -17,8 +17,9 @@ export default defineNuxtPlugin(() => {
                     const module = await import(/* @vite-ignore */ moduleUrl);
                     await module.default();
                     installEngineRuntime({
-                        prepare: module.prepare,
-                        complete: module.complete
+                        start: module.start,
+                        respond: module.respond,
+                        transportFailed: module.transport_failed
                     });
                     state.value = "ready";
                 } catch (error) {

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { TaskState } from "~/types/task";
 
 const props = defineProps<{ state: TaskState }>();
@@ -53,8 +53,8 @@ const detail = computed(() => statusDetails[props.state]);
 </script>
 
 <template>
-  <UBadge :color="detail.color" variant="subtle" size="sm">
-    <UIcon :name="detail.icon" class="size-3.5" :class="{ 'animate-spin': detail.loading }"/>
+  <UBadge :color="detail.color" size="xs" variant="subtle">
+    <UIcon :class="{ 'animate-spin': detail.loading }" :name="detail.icon" class="size-3.5"/>
     {{ detail.label }}
   </UBadge>
 </template>

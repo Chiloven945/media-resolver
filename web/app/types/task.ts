@@ -6,7 +6,7 @@ export type TaskState =
         | "processing"
         | "ready"
         | "failed"
-        | "cancelled"
+        | "cancelled";
 
 export interface TaskError {
     code: string;
@@ -26,12 +26,12 @@ export interface ResolveTask {
     error?: TaskError;
 }
 
-export interface PublicErrorCopy {
+export interface PublicErrorMessage {
     title: string;
     description: string;
 }
 
-const PUBLIC_ERRORS: Record<string, PublicErrorCopy> = {
+const PUBLIC_ERRORS: Record<string, PublicErrorMessage> = {
     invalid_input: {
         title: "Invalid link",
         description: "Enter a valid link."
@@ -43,6 +43,14 @@ const PUBLIC_ERRORS: Record<string, PublicErrorCopy> = {
     remote_not_found: {
         title: "Source unavailable",
         description: "The source is no longer available."
+    },
+    remote_unavailable: {
+        title: "Source unavailable",
+        description: "This source isn't available through the current access methods."
+    },
+    remote_restricted: {
+        title: "Access unavailable",
+        description: "This source requires access that isn't available in the current session."
     },
     remote_rejected: {
         title: "Request rejected",
@@ -60,13 +68,13 @@ const PUBLIC_ERRORS: Record<string, PublicErrorCopy> = {
         title: "Nothing found",
         description: "No usable resources were found."
     },
+    network_unavailable: {
+        title: "Network unavailable",
+        description: "The available sources couldn't be reached."
+    },
     network_error: {
         title: "Network unavailable",
-        description: "The source couldn't be reached."
-    },
-    browser_blocked: {
-        title: "Direct access blocked",
-        description: "Your browser cannot read this response directly. Open the response in a new tab, copy it, then continue here."
+        description: "The available sources couldn't be reached."
     },
     internal: {
         title: "Unable to complete task",
@@ -74,6 +82,6 @@ const PUBLIC_ERRORS: Record<string, PublicErrorCopy> = {
     }
 };
 
-export function getPublicErrorMessage(code?: string): PublicErrorCopy {
+export function getPublicErrorMessage(code?: string): PublicErrorMessage {
     return PUBLIC_ERRORS[code || "internal"] || PUBLIC_ERRORS.internal!;
 }

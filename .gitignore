@@ -15,3 +15,7 @@ web/public/wasm/engine_bg.wasm
 web/public/wasm/engine.d.ts
 web/public/wasm/engine_bg.wasm.d.ts
 web/public/wasm/package.json
+
+.env
+.env.*
+!.env.example

@@ -2,38 +2,47 @@
 
 A Rust-powered resolver for supported links, available as a native CLI and a browser application.
 
-Version **0.1.0** is intentionally focused: a small Rust engine owns validation, protocol handling,
-response parsing, and resource normalization; the CLI supplies native HTTP transport; the browser
-build exposes the same engine through WebAssembly while Nuxt handles transport and task
-orchestration.
+Version **0.1.0** uses a Rust-owned multi-route resolution engine. Input validation, route ordering,
+fallback policy, response classification, and resource normalization all live in the shared core.
+The CLI and browser are transport executors: they perform the requested HTTP operation and return
+the outcome to Rust. The browser build remains a static Nuxt application with a thin WebAssembly
+bridge.
 
 ## Features
 
 - Native Rust CLI for one or many links
-- Shared Rust core with a stable, source-neutral resource model
+- Shared Rust resolution state machine with source-neutral public models
+- Multiple automatic resolution routes with deterministic fallback policy
+- Optional managed gateway configured at deployment time
 - Thin WebAssembly bridge with no browser networking inside WASM
-- Nuxt 4 + Nuxt UI 4 task workspace
-- Concurrent task queue with cancellation, retries, deduplication, and a short in-memory cache
-- Image, video, animation, preferred-resource, and variant normalization
+- Nuxt 4 + Nuxt UI 4 task workspace with a compact sidebar and resource-focused detail view
+- Concurrent task queue with cancellation, route-aware retries, deduplication, and memory caches
+- Route-health memory that avoids repeatedly using a temporarily blocked route
+- Image, video, animation, preferred-resource, and full variant normalization
+- Direct video variants plus stream representations with container/codec/bitrate/size metadata
+- Advanced manual recovery only when all automatic browser routes are exhausted
+- Direct browser downloads with optional managed download fallback
 - Responsive desktop and mobile layouts
 - System-aware light and dark themes
-- Static deployment with no application server
-- No embedded credentials, API keys, analytics, or third-party proxy
+- Static deployment with no application server requirement
+- No embedded credentials, API keys, analytics, or open proxy
 
 ## Repository layout
 
 ```text
-crates/core   Shared validation, protocol adapter, parsing, normalization
-crates/cli    Native transport, concurrency, and terminal/JSON output
-crates/wasm   Thin wasm-bindgen bridge
-web           Nuxt UI single-page application
-tests         Protocol fixtures used by Rust tests
-.github       CI, static deployment, and optional protocol smoke checks
+crates/core   Source inspection, resolution state machine, route adapters, normalization
+crates/cli    Native HTTP transport, concurrency, and terminal/JSON output
+crates/wasm   Thin wasm-bindgen state-machine bridge
+web           Nuxt UI single-page application and browser transport executor
+tests         Route compatibility fixtures used by Rust tests
+docs          Maintainer-facing protocol documentation
+.github       CI, static deployment, and optional route smoke checks
 ```
 
-Source-specific implementation details are intentionally confined to the protocol adapter and
-protocol compatibility fixtures/tests. Public Rust models, WASM exports, TypeScript interfaces, Vue
-components, CLI copy, and user-facing application text use neutral resource terminology.
+Source-specific implementation details are confined to protocol source/route/schema modules,
+protocol fixtures, and maintainer documentation. Public Rust models, WASM exports, TypeScript
+interfaces, Vue components, CLI copy, README product copy, and user-facing application text use
+neutral resource terminology.
 
 ## Requirements
 
@@ -80,7 +89,31 @@ Key options:
 ```
 
 Standard output is reserved for result data. Diagnostics and human-readable failures go to standard
-error.
+error. The optional environment variable `MEDIA_RESOLVER_GATEWAY_ENDPOINT` enables the managed route
+for native runs.
+
+## Resolution model
+
+The core exposes a small state-machine API:
+
+```text
+start_resolution
+      ↓
+Request ── transport ──► accept_response / accept_transport_failure
+  ▲                                      │
+  └────────────── next route ◄───────────┤
+                                         ├─► Resolved
+                                         └─► Failed
+```
+
+A request includes an opaque route key and a retry policy. Callers must not derive business behavior
+from the route key. Explicit restricted-access outcomes are terminal; ordinary route unavailability,
+rate exhaustion, malformed route responses, and transport failures can advance to another route.
+Final errors are selected from the complete session failure history rather than whichever route
+happened to run last.
+
+Serialized resolution sessions contain only control state. They do not contain raw response bodies,
+credentials, cookies, or resolved media payloads.
 
 ## Web application
 
@@ -96,15 +129,44 @@ bun run dev
 The browser architecture is deliberately split:
 
 ```text
-Nuxt task queue -> browser fetch -> raw response -> WASM -> ResourceBundle
+Nuxt task queue
+      ↓
+generic resolver executor
+      ↓
+Rust state machine ──► PreparedRequest
+      ▲                    │
+      │                    ▼
+      └──── result ◄── browser transport
 ```
 
-The WASM module does not perform HTTP requests. Browser restrictions therefore remain explicit and
-cancellable through `AbortController`, while native transport remains independent.
+WASM does not perform HTTP. Browser CORS/network failures are converted into transport failures and
+returned to the Rust engine, which decides whether another route should be attempted. A task only
+enters the failed state after the resolution session itself becomes terminal.
 
-Because the browser transport is direct, a remote source can restrict cross-origin access
-independently of this application. When that happens, the task fails with a neutral browser-blocked
-error; the project intentionally does not bypass that restriction with a server or public proxy.
+### Optional managed service
+
+A deployment can add a managed route without changing or rebuilding the Rust engine API:
+
+```bash
+NUXT_PUBLIC_RESOLVER_ENDPOINT=https://resolver.example.dev
+```
+
+The endpoint is public configuration, not a secret. The expected contracts are intentionally narrow:
+
+```text
+GET {endpoint}/v1/resources/{numeric-source-key}
+GET {endpoint}/v1/download/{numeric-source-key}/{resource-id}
+GET {endpoint}/v1/download/{numeric-source-key}/{resource-id}?variant={zero-based-index}
+```
+
+The resource endpoint must use the neutral `ResourceBundle` schema. The download endpoint resolves
+the resource identifier server-side and returns the selected representation as an attachment;
+callers never supply an arbitrary upstream URL, host, method, or header. The configured endpoint
+must be HTTPS and may not contain user-info, query parameters, or fragments. It is not an arbitrary
+URL proxy.
+
+No token or API credential belongs in `NUXT_PUBLIC_RESOLVER_ENDPOINT`, the Nuxt bundle, or WASM.
+Secrets needed by a managed service must remain in that service's secret storage.
 
 ### Static generation
 
@@ -117,26 +179,44 @@ bun run generate
 The generated site is written to `web/.output/public` and can be served by a static host. Set
 `NUXT_APP_BASE_URL` when the site is hosted below a path prefix.
 
+## Browser task behavior
+
+- Tasks are scheduled with a configurable concurrency of 1–8.
+- Every active task owns an `AbortController` outside Nuxt serializable state.
+- Result cache entries live in memory for five minutes.
+- Route-health entries also live only in memory; access-blocked routes are temporarily skipped,
+  short network outages receive a shorter cooldown, and exhausted rate limits respect the available
+  retry delay when possible.
+- Raw remote bodies are passed directly from transport into WASM and are never written to Vue task
+  state or local storage.
+- Manual response recovery keeps its opaque route session in module memory and is offered only when
+  a browser route could be opened manually but could not be read automatically.
+
 ## Privacy and persistence
 
-The browser application keeps task inputs and resolved resource addresses in memory only. It does
-not persist task history or raw remote responses. Local storage is limited to interface preferences
-such as concurrency and preview behavior.
+The browser application keeps task inputs, resolution state, resource addresses, cache entries, and
+route health in memory only. It does not persist task history or raw remote responses. Local storage
+is limited to interface preferences such as concurrency and preview behavior.
 
-The application contains no account system, server, analytics SDK, embedded secret, public proxy, or
+The application contains no account system, analytics SDK, embedded secret, open proxy, or
 background history database.
 
 ## Resource actions
 
-Version 0.1.0 guarantees two resource actions in the browser:
+Version 0.1.0 uses a download-first resource workflow:
 
-- Open resource
-- Copy address
+- Download
+- Open externally
 
-The resource-action layer also contains a guarded best-effort save helper for future use, but the
-0.1.0 interface intentionally exposes only the two actions above because direct browser retrieval
-can be restricted by cross-origin policy. The application does not promise ZIP export or bulk
-download in 0.1.0.
+The browser first attempts a CORS-readable resource request and saves the resulting `Blob` with a
+local filename. When direct reading is unavailable and a managed endpoint is configured, it retries
+through the restricted `/v1/download/{source-key}/{resource-id}` contract. If neither path succeeds,
+the interface keeps Open externally available as the explicit fallback.
+
+Download progress is kept separately from resolver task state. Known content length produces
+determinate progress; otherwise the interface uses an indeterminate progress indicator. Streaming
+representations are kept as variants and can be saved as their underlying playlist representation,
+but the built-in preview does not add a dedicated streaming-player dependency in 0.1.0.
 
 ## Testing
 
@@ -148,7 +228,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-WASM parity test:
+WASM state-machine parity:
 
 ```bash
 cd crates/wasm
@@ -166,48 +246,55 @@ bun run test:e2e
 bun run generate
 ```
 
-The normal test suite mocks remote transport. A separate non-blocking workflow can use the
-repository variable `SMOKE_LINK` for an optional real protocol health check without hard-coding a
-source URL into CI.
+Normal tests mock transport. The non-blocking protocol smoke workflow uses optional repository
+variables for live route health checks and does not gate pull requests.
 
 ## Build principles
 
-- Rust is the single source of truth for input validation and response normalization.
-- CLI and WASM do not duplicate resolver rules.
+- Rust is the single source of truth for input validation, route selection, fallback, error
+  classification, and normalization.
+- CLI and browser transports never encode provider-specific fallback rules.
 - WASM remains a serialization/FFI boundary, not a networking layer.
-- Nuxt owns browser transport, queue state, retries, cancellation, and presentation.
+- Nuxt owns queue state, generic transport execution, cancellation, and presentation.
+- Route keys are opaque outside the Rust core.
 - Raw remote bodies never enter Vue task state.
 - Resource URLs are validated as HTTPS before they are exposed to callers.
-- User-facing errors are mapped from stable error codes rather than displaying raw remote messages.
+- User-facing errors are mapped from stable neutral error codes rather than raw remote messages.
 - Source identifiers remain strings across Rust, WASM, and TypeScript.
+- Explicit restricted access is terminal for anonymous routes.
 
 ## 0.1.0 scope
 
 Included:
 
 - supported canonical and alternate link forms
+- multiple automatic resolution routes
+- optional managed resolution and download gateway contracts
 - image, video, and animation resources
-- preferred resource selection and all variants
+- preferred selection across direct and streaming variants
 - native CLI and JSON output
-- WebAssembly bridge
+- WebAssembly state-machine bridge
 - Nuxt UI task workspace
 - multiple concurrent tasks
-- cancellation, retries, deduplication, and memory cache
+- cancellation, retry policy, route health, deduplication, and memory caches
+- advanced manual recovery
 - responsive desktop/mobile interface
 - light/dark mode
 - static deployment
 
 Explicitly out of scope:
 
-- accounts or OAuth
-- application server
+- accounts or user authorization
+- required application server
 - persistent task history
+- arbitrary/open proxy endpoints
 - ZIP export
 - browser extension or PWA
 - analytics
-- public CORS/download proxy
 - localization framework
+
+Maintainers can find route-specific compatibility notes in `docs/protocol.md`.
 
 ## License
 
-This project is licensed under the Unlicense license. See the [LICENSE](LICENSE) file for details.
+Released into the public domain under the Unlicense. See `LICENSE`.

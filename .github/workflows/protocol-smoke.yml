@@ -12,15 +12,45 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        route:
+          - public-v2
+          - embed-v1
+          - managed-v1
     steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Run optional live smoke check
+      - name: Select optional smoke URL
+        id: route
         env:
-          SMOKE_LINK: ${{ vars.SMOKE_LINK }}
+          ROUTE: ${{ matrix.route }}
+          PUBLIC_URL: ${{ vars.SMOKE_PUBLIC_URL }}
+          EMBED_URL: ${{ vars.SMOKE_EMBED_URL }}
+          MANAGED_URL: ${{ vars.SMOKE_MANAGED_URL }}
         run: |
-          if [ -z "$SMOKE_LINK" ]; then
-            echo "SMOKE_LINK is not configured; skipping live protocol check."
-            exit 0
+          case "$ROUTE" in
+            public-v2)  url="$PUBLIC_URL" ;;
+            embed-v1)   url="$EMBED_URL" ;;
+            managed-v1) url="$MANAGED_URL" ;;
+            *) exit 2 ;;
+          esac
+          if [ -z "$url" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "No live URL configured for $ROUTE; skipping."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "url=$url" >> "$GITHUB_OUTPUT"
           fi
-          cargo run --release -p media-resolver-cli -- --json "$SMOKE_LINK"
+
+      - name: Check live route
+        if: steps.route.outputs.configured == 'true'
+        env:
+          URL: ${{ steps.route.outputs.url }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 25 \
+            --output /tmp/response.bin \
+            "$URL"
+          test -s /tmp/response.bin
+          echo "Live route returned a non-empty successful response."

@@ -1,0 +1,20 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "id": "2011590242474893548",
+    "media": {
+      "all": [
+        {
+          "id": "p1",
+          "type": "photo",
+          "url": "https://pbs.twimg.com/media/example.jpg",
+          "width": 2048,
+          "height": 2048
+        }
+      ],
+      "photos": [],
+      "videos": []
+    }
+  }
+}

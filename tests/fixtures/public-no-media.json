@@ -1,0 +1,11 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "media": {
+      "all": [],
+      "photos": [],
+      "videos": []
+    }
+  }
+}

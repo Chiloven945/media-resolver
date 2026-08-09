@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "status": {
+    "type": "status",
+    "media": {
+      "all": [
+        {
+          "id": "g1",
+          "type": "gif",
+          "url": "https://video.twimg.com/tweet_video/example.mp4",
+          "width": 720,
+          "height": 720,
+          "thumbnail_url": "https://pbs.twimg.com/tweet_video_thumb/example.jpg",
+          "duration": 4.2,
+          "formats": [
+            {
+              "container": "mp4",
+              "codec": "h264",
+              "url": "https://video.twimg.com/tweet_video/example.mp4",
+              "width": 720,
+              "height": 720
+            }
+          ]
+        }
+      ],
+      "photos": [],
+      "videos": []
+    }
+  }
+}

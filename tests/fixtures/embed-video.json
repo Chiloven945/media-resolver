@@ -1,0 +1,31 @@
+{
+  "mediaDetails": [
+    {
+      "media_url_https": "https://pbs.twimg.com/media/embed-preview.jpg",
+      "type": "video",
+      "original_info": {
+        "width": 1280,
+        "height": 720
+      },
+      "video_info": {
+        "duration_millis": 12345,
+        "variants": [
+          {
+            "content_type": "application/x-mpegURL",
+            "url": "https://video.twimg.com/ext_tw_video/embed/pl/playlist.m3u8"
+          },
+          {
+            "bitrate": 832000,
+            "content_type": "video/mp4",
+            "url": "https://video.twimg.com/ext_tw_video/embed/vid/avc1/640x360/low.mp4"
+          },
+          {
+            "bitrate": 2176000,
+            "content_type": "video/mp4",
+            "url": "https://video.twimg.com/ext_tw_video/embed/vid/avc1/1280x720/high.mp4"
+          }
+        ]
+      }
+    }
+  ]
+}

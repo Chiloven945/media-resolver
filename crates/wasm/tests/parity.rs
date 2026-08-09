@@ -1,18 +1,53 @@
 #![cfg(target_arch = "wasm32")]
 
-use media_resolver_core::{inspect_input, process_response};
-use media_resolver_wasm::complete;
-use serde_wasm_bindgen::from_value;
+use media_resolver_core::{
+    ResolutionOptions, ResolutionStep, RuntimeProfile, TransportFailure, accept_response,
+    accept_transport_failure, start_resolution,
+};
+use media_resolver_wasm::{respond, start, transport_failed};
+use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen_test::*;
 
-const FIXTURE: &[u8] = include_bytes!("../../../tests/fixtures/image-single.json");
+const FIXTURE: &[u8] = include_bytes!("../../../tests/fixtures/public-image-single.json");
 const INPUT: &str = include_str!("../../../tests/fixtures/input-canonical.txt");
 
+fn options() -> ResolutionOptions {
+    ResolutionOptions {
+        profile: RuntimeProfile::Browser,
+        gateway_endpoint: None,
+    }
+}
+
 #[wasm_bindgen_test]
-fn wasm_complete_matches_core_serialization() {
-    let descriptor = inspect_input(INPUT.trim()).unwrap();
-    let expected = process_response(&descriptor, 200, FIXTURE).unwrap();
-    let actual: media_resolver_core::ResourceBundle =
-        from_value(complete(INPUT.trim(), 200, FIXTURE).unwrap()).unwrap();
+fn wasm_start_matches_core() {
+    let expected = start_resolution(INPUT.trim(), options()).unwrap();
+    let actual: ResolutionStep =
+        from_value(start(INPUT.trim(), to_value(&options()).unwrap()).unwrap()).unwrap();
+    assert_eq!(actual, expected);
+}
+
+#[wasm_bindgen_test]
+fn wasm_respond_matches_core() {
+    let initial = start_resolution(INPUT.trim(), options()).unwrap();
+    let ResolutionStep::Request { session, .. } = initial else {
+        panic!("expected request step");
+    };
+    let expected = accept_response(session.clone(), 200, FIXTURE).unwrap();
+    let actual: ResolutionStep =
+        from_value(respond(to_value(&session).unwrap(), 200, FIXTURE).unwrap()).unwrap();
+    assert_eq!(actual, expected);
+}
+
+#[wasm_bindgen_test]
+fn wasm_transport_failure_matches_core() {
+    let initial = start_resolution(INPUT.trim(), options()).unwrap();
+    let ResolutionStep::Request { session, .. } = initial else {
+        panic!("expected request step");
+    };
+    let expected =
+        accept_transport_failure(session.clone(), TransportFailure::AccessBlocked).unwrap();
+    let actual: ResolutionStep =
+        from_value(transport_failed(to_value(&session).unwrap(), "access_blocked").unwrap())
+            .unwrap();
     assert_eq!(actual, expected);
 }

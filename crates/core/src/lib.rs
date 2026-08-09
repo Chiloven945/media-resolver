@@ -4,10 +4,15 @@ mod input;
 mod model;
 mod normalize;
 mod protocol;
+mod resolution;
 
-pub use api::{inspect_input, prepare_request, process_response};
+pub use api::{accept_response, accept_transport_failure, inspect_input, start_resolution};
 pub use error::{ResolveError, ResolveErrorCode};
 pub use model::{
     InputDescriptor, PreparedRequest, RequestHeader, RequestMethod, ResourceBundle, ResourceItem,
-    ResourceKind, ResourceVariant,
+    ResourceKind, ResourceVariant, RetryPolicy,
+};
+pub use resolution::{
+    ResolutionOptions, ResolutionSession, ResolutionStep, ResolveFailure, RuntimeProfile,
+    TransportFailure,
 };

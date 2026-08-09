@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 const props = defineProps<{ taskId: string }>();
 const open = defineModel<boolean>("open", { default: false });
 const value = ref("");
@@ -6,13 +6,29 @@ const busy = ref(false);
 const queue = useTaskQueue();
 const toast = useToast();
 
+const openResponse = () => {
+  if (!queue.openResponse(props.taskId)) {
+    toast.add({
+      title: "Unable to open response",
+      description: "Allow pop-ups for this page and try again.",
+      color: "error"
+    });
+    return;
+  }
+  toast.add({
+    title: "Response opened",
+    description: "Return here with the complete response text to continue.",
+    color: "neutral"
+  });
+};
+
 const pasteFromClipboard = async () => {
   try {
     const text = await navigator.clipboard.readText();
     if (!text.trim()) {
       toast.add({
         title: "Clipboard is empty",
-        description: "Copy the response text first, then try again.",
+        description: "Place the response text on the clipboard first, then try again.",
         color: "neutral"
       });
       return;
@@ -27,14 +43,14 @@ const pasteFromClipboard = async () => {
   }
 };
 
-const submit = () => {
+const submit = async () => {
   if (!value.value.trim() || busy.value) {
     return;
   }
 
   busy.value = true;
   try {
-    const result = queue.completeFromResponse(props.taskId, value.value);
+    const result = await queue.completeFromResponse(props.taskId, value.value);
     if (result.status === "ready") {
       toast.add({ title: "Response processed", color: "success" });
       value.value = "";
@@ -44,7 +60,7 @@ const submit = () => {
 
     toast.add({
       title: "Response could not be used",
-      description: "Copy the complete response text and try again.",
+      description: "Use the complete response text and try again.",
       color: "error"
     });
   } finally {
@@ -62,25 +78,35 @@ watch(open, isOpen => {
 <template>
   <UModal
       v-model:open="open"
-      title="Continue from response"
-      description="Copy the complete response from the opened tab, then paste it here."
+      description="Use a response that your browser can open but could not read automatically."
+      title="Advanced recovery"
   >
     <template #body>
       <div class="space-y-3">
         <UAlert
             color="neutral"
-            variant="subtle"
+            description="The pasted response is passed directly to the local processing engine and is not stored in task history."
             icon="i-lucide-shield-check"
             title="Processed locally"
-            description="The pasted response is passed directly to the local processing engine and is not stored in task history."
-        />
+            variant="subtle"
+        >
+          <template #actions>
+            <UButton
+                color="neutral"
+                icon="i-lucide-external-link"
+                label="Open response"
+                variant="soft"
+                @click="openResponse"
+            />
+          </template>
+        </UAlert>
         <UTextarea
             v-model="value"
             :rows="12"
+            aria-label="Response text"
             autoresize
             class="w-full"
             placeholder="Paste the complete response here"
-            aria-label="Response text"
         />
       </div>
     </template>
@@ -88,19 +114,19 @@ watch(open, isOpen => {
     <template #footer>
       <div class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-between">
         <UButton
-            label="Paste from clipboard"
-            icon="i-lucide-clipboard-paste"
             color="neutral"
+            icon="i-lucide-clipboard-paste"
+            label="Paste from clipboard"
             variant="soft"
             @click="pasteFromClipboard"
         />
         <div class="flex justify-end gap-2">
-          <UButton label="Cancel" color="neutral" variant="ghost" @click="open = false"/>
+          <UButton color="neutral" label="Cancel" variant="ghost" @click="open = false"/>
           <UButton
-              label="Continue"
-              icon="i-lucide-arrow-right"
-              :loading="busy"
               :disabled="!value.trim()"
+              :loading="busy"
+              icon="i-lucide-arrow-right"
+              label="Continue"
               @click="submit"
           />
         </div>

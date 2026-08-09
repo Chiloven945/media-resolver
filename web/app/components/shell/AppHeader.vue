@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import type { DropdownMenuItem } from "@nuxt/ui";
 
 const emit = defineEmits<{ openTasks: [] }>();
@@ -30,57 +30,59 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
 </script>
 
 <template>
-  <UDashboardNavbar>
+  <UHeader
+      :toggle="false"
+      :ui="{ container: 'w-full max-w-none px-3 sm:px-4 lg:px-5' }"
+      class="border-b border-default bg-default"
+      data-testid="app-header"
+  >
     <template #left>
       <UButton
-          icon="i-lucide-list-todo"
-          color="neutral"
-          variant="ghost"
-          class="lg:hidden"
           aria-label="Open tasks"
+          class="lg:hidden"
+          color="neutral"
+          icon="i-lucide-list-todo"
+          variant="ghost"
           @click="emit('openTasks')"
       />
-      <div class="flex items-center gap-3">
-        <div
-            class="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-          <UIcon name="i-lucide-orbit" class="size-5"/>
-        </div>
-        <div class="min-w-0">
-          <div class="truncate text-sm font-semibold text-highlighted">Media Resolver</div>
-          <div class="hidden text-xs text-muted sm:block">Resolve supported links into usable
-            resources.
-          </div>
-        </div>
+      <div class="flex items-center gap-2.5">
+        <UIcon class="size-6 text-primary" name="i-lucide-orbit"/>
+        <span class="text-sm font-semibold text-highlighted sm:text-base">Media Resolver</span>
       </div>
     </template>
 
     <template #right>
       <UButton
-          icon="i-lucide-plus"
-          color="primary"
-          variant="soft"
-          class="lg:hidden"
           aria-label="New task"
+          class="lg:hidden"
+          color="primary"
+          icon="i-lucide-plus"
+          variant="soft"
           @click="emit('openTasks')"
       />
-      <UBadge color="neutral" variant="subtle" class="hidden sm:inline-flex">v0.1.0</UBadge>
-      <UColorModeButton color="neutral" variant="ghost"/>
+      <UBadge class="hidden sm:inline-flex" color="neutral" size="sm" variant="subtle">v0.1.0
+      </UBadge>
+      <UColorModeButton aria-label="Toggle color mode" color="neutral" variant="ghost"/>
       <UDropdownMenu :items="menuItems">
-        <UButton icon="i-lucide-ellipsis"
-                 color="neutral"
-                 variant="ghost"
-                 aria-label="More options"/>
+        <UButton
+            aria-label="More options"
+            color="neutral"
+            icon="i-lucide-ellipsis"
+            variant="ghost"
+        />
       </UDropdownMenu>
     </template>
-  </UDashboardNavbar>
+  </UHeader>
 
-  <UModal v-model:open="preferencesOpen"
-          title="Preferences"
-          description="These settings stay on this device.">
+  <UModal
+      v-model:open="preferencesOpen"
+      description="These settings stay on this device."
+      title="Preferences"
+  >
     <template #body>
-      <div class="space-y-6">
-        <UFormField label="Concurrent tasks"
-                    description="Choose how many remote requests can run at once.">
+      <div class="space-y-5">
+        <UFormField description="Choose how many remote requests can run at once."
+                    label="Concurrent tasks">
           <USelect v-model="settings.concurrency" :items="concurrencyOptions" class="w-full"/>
         </UFormField>
 
@@ -105,17 +107,16 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
     </template>
   </UModal>
 
-  <UModal v-model:open="aboutOpen" title="Media Resolver" description="Version 0.1.0">
+  <UModal v-model:open="aboutOpen" description="Version 0.1.0" title="Media Resolver">
     <template #body>
       <div class="space-y-4 text-sm">
-        <p class="text-muted">Rust-powered local processing engine with a Nuxt UI client
-          interface.</p>
+        <p class="text-muted">Resolve supported links into usable resources with a Rust-powered
+          local processing engine.</p>
         <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3">
           <span class="text-muted">Core</span>
           <span class="font-medium text-highlighted">0.1.0</span>
           <span class="text-muted">Engine</span>
-          <span><UBadge :color="engineState === 'ready' ? 'success' : engineState === 'error' ? 'error' : 'neutral'"
-                        variant="subtle">{{ engineState }}</UBadge></span>
+          <span class="font-medium capitalize text-highlighted">{{ engineState }}</span>
           <span class="text-muted">Build</span>
           <span class="font-mono text-xs text-highlighted">{{ config.public.buildHash }}</span>
         </div>

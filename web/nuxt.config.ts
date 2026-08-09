@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     css: ["~/assets/css/main.css"],
 
     fonts: {
-        provider: 'bunny'
+        provider: "bunny"
     },
 
     app: {
@@ -28,19 +28,14 @@ export default defineNuxtConfig({
 
     runtimeConfig: {
         public: {
-            buildHash: process.env.GITHUB_SHA?.slice(0, 7) || "development"
+            buildHash: process.env.GITHUB_SHA?.slice(0, 7) || "development",
+            resolverEndpoint: process.env.NUXT_PUBLIC_RESOLVER_ENDPOINT || ""
         }
     },
 
     typescript: {
         strict: true,
         typeCheck: false
-    },
-
-    hooks: {
-        "prerender:routes"({ routes }) {
-            routes.clear();
-        }
     },
 
     compatibilityDate: "2026-08-01"

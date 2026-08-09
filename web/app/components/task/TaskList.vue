@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 const emit = defineEmits<{ selected: [] }>();
 const queue = useTaskQueue();
 </script>
