@@ -1,3 +1,4 @@
+import { ref } from "vue";
 import type { ResourceBundle } from "~/types/engine";
 import type {
     PreparedRequest,
@@ -30,10 +31,22 @@ export type ResolverPhase = "connecting" | "processing";
 
 const routeHealth = new Map<string, RouteHealth>();
 const recoveryContexts = new Map<string, RecoveryContext>();
+const recoveryRevision = ref(0);
 const EMPTY_BODY = new Uint8Array();
 const ACCESS_BLOCKED_TTL_MS = 10 * 60 * 1000;
 const NETWORK_TTL_MS = 30 * 1000;
 const RATE_LIMIT_TTL_MS = 30 * 1000;
+
+function rememberRecovery(taskId: string, context: RecoveryContext) {
+    recoveryContexts.set(taskId, context);
+    recoveryRevision.value += 1;
+}
+
+function forgetRecovery(taskId: string) {
+    if (recoveryContexts.delete(taskId)) {
+        recoveryRevision.value += 1;
+    }
+}
 
 export function useResolverExecutor() {
     const engine = useEngine();
@@ -80,7 +93,7 @@ export function useResolverExecutor() {
             }
 
             if (step.kind === "resolved") {
-                recoveryContexts.delete(taskId);
+                forgetRecovery(taskId);
                 return {
                     sourceKey: step.result.sourceKey || sourceKey,
                     normalizedInput,
@@ -92,7 +105,7 @@ export function useResolverExecutor() {
                         === "remote_restricted"
                         || step.error.code
                         === "remote_not_found") {
-                    recoveryContexts.delete(taskId);
+                    forgetRecovery(taskId);
                 }
                 throw step.error;
             }
@@ -102,7 +115,7 @@ export function useResolverExecutor() {
             const health = getRouteHealth(step.request.routeKey);
             if (health) {
                 if (health.reason === "access_blocked") {
-                    recoveryContexts.set(taskId, {
+                    rememberRecovery(taskId, {
                         session: step.session,
                         request: step.request
                     });
@@ -132,7 +145,7 @@ export function useResolverExecutor() {
 
             const failure = transportFailureKind(transport);
             if (transport.kind === "access_blocked") {
-                recoveryContexts.set(taskId, {
+                rememberRecovery(taskId, {
                     session: step.session,
                     request: step.request
                 });
@@ -159,7 +172,7 @@ export function useResolverExecutor() {
         }
         const step = engine.respond(context.session, 200, bytes);
         if (step.kind === "resolved") {
-            recoveryContexts.delete(taskId);
+            forgetRecovery(taskId);
             return step.result;
         }
         if (step.kind === "failed") {
@@ -168,7 +181,10 @@ export function useResolverExecutor() {
         throw { code: "remote_unavailable" };
     };
 
-    const hasRecovery = (taskId: string): boolean => recoveryContexts.has(taskId);
+    const hasRecovery = (taskId: string): boolean => {
+        void recoveryRevision.value;
+        return recoveryContexts.has(taskId);
+    };
 
     const openRecoveryResponse = (taskId: string): boolean => {
         const context = recoveryContexts.get(taskId);
@@ -188,7 +204,7 @@ export function useResolverExecutor() {
     };
 
     const clearRecovery = (taskId: string) => {
-        recoveryContexts.delete(taskId);
+        forgetRecovery(taskId);
     };
 
     const errorCode = (error: unknown): string =>

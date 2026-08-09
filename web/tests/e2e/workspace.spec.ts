@@ -325,7 +325,7 @@ test("supports multiple tasks, selection and duplicate detection", async ({ page
     await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
 
     await addTask(page, "2001");
-    await expect(page.getByText("Task already exists")).toBeVisible();
+    await expect(page.getByText("Task already exists", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
 });
 
@@ -346,10 +346,20 @@ test("limits concurrent remote work to the configured queue size", async ({ page
     await page.unroute("https://primary.invalid/**");
     let active = 0;
     let maximumActive = 0;
+    let releaseGate: (() => void) | undefined;
+    const concurrencyGate = new Promise<void>(resolve => {
+        releaseGate = resolve;
+    });
     await page.route("https://primary.invalid/**", async route => {
         active += 1;
         maximumActive = Math.max(maximumActive, active);
-        await new Promise(resolve => setTimeout(resolve, 350));
+        if (active === 4) {
+            releaseGate?.();
+        }
+        await Promise.race([
+            concurrencyGate,
+            new Promise<void>(resolve => setTimeout(resolve, 3000))
+        ]);
         active -= 1;
         await route.fulfill({
             status: 200,
@@ -422,7 +432,7 @@ test("cancel during first route never starts a fallback route", async ({ page },
     await addTask(page, "4301");
     await expect(page.getByText("Connecting").first()).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).last().click();
-    await expect(page.getByText("Task cancelled")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Task cancelled" })).toBeVisible();
     await page.waitForTimeout(100);
     expect(managedRequests).toBe(0);
 });
@@ -745,7 +755,7 @@ test("direct resource download creates a browser download", async ({ page }, tes
     await page.getByRole("button", { name: "Download", exact: true }).click();
     const download = await event;
     expect(download.suggestedFilename()).toBe("resource-1.jpg");
-    await expect(page.getByText("Resource downloaded")).toBeVisible();
+    await expect(page.getByText("Resource downloaded", { exact: true })).toBeVisible();
 });
 
 test(
