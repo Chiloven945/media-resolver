@@ -98,13 +98,13 @@ impl ResolverAdapter for EmbedV1Adapter {
             Ok(value) => value,
             Err(_) => return AdapterOutcome::Fallback(RouteFailure::InvalidResponse),
         };
-        if resources.is_empty() {
-            if let Some(quoted) = document.quoted_tweet.as_deref() {
-                resources = match collect_resources(&input.source_key, &quoted.media_details) {
-                    Ok(value) => value,
-                    Err(_) => return AdapterOutcome::Fallback(RouteFailure::InvalidResponse),
-                };
-            }
+        if resources.is_empty()
+            && let Some(quoted) = document.quoted_tweet.as_deref()
+        {
+            resources = match collect_resources(&input.source_key, &quoted.media_details) {
+                Ok(value) => value,
+                Err(_) => return AdapterOutcome::Fallback(RouteFailure::InvalidResponse),
+            };
         }
 
         if resources.is_empty() {
@@ -259,7 +259,7 @@ fn generate_token(source_key: &str) -> Result<String, ResolveError> {
         .map_err(|_| ResolveError::InvalidInput)?
         / 1e15
         * PI;
-    Ok(float_to_base36(value).replace('0', "").replace('.', ""))
+    Ok(float_to_base36(value).replace(['0', '.'], ""))
 }
 
 fn float_to_base36(value: f64) -> String {

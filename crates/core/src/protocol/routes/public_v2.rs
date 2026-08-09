@@ -56,10 +56,10 @@ impl ResolverAdapter for PublicV2Adapter {
             Err(_) => return AdapterOutcome::Fallback(RouteFailure::InvalidResponse),
         };
 
-        if let Some(code) = response.code {
-            if let Some(outcome) = classify_http_status(code) {
-                return outcome;
-            }
+        if let Some(code) = response.code
+            && let Some(outcome) = classify_http_status(code)
+        {
+            return outcome;
         }
 
         let Some(status_value) = response.status else {
@@ -113,14 +113,12 @@ fn process_status_value(
                 });
             }
 
-            if depth < 2 {
-                if let Some(quote) = document.quote.as_ref() {
-                    if let AdapterOutcome::Resolved(result) =
-                        process_status_value(input, quote, depth + 1)
-                    {
-                        return AdapterOutcome::Resolved(result);
-                    }
-                }
+            if depth < 2
+                && let Some(quote) = document.quote.as_ref()
+                && let AdapterOutcome::Resolved(result) =
+                    process_status_value(input, quote, depth + 1)
+            {
+                return AdapterOutcome::Resolved(result);
             }
 
             AdapterOutcome::Fallback(RouteFailure::NoResources)
@@ -194,36 +192,36 @@ fn normalize_photo(
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| format!("{source_key}:{}", index + 1));
 
-    if photo.kind == "gif" {
-        if let Some(transcode_url) = photo.transcode_url.as_deref() {
-            let container = container_from_url(transcode_url);
-            let mut variants = vec![ResourceVariant {
-                url: transcode_url.to_owned(),
-                mime_type: mime_for_container(container.as_deref()),
-                container,
-                codec: None,
-                bitrate: None,
-                size_bytes: None,
-                width: Some(photo.width),
-                height: Some(photo.height),
-            }];
-            sort_variants(&mut variants);
-            let Some(preferred) = preferred_variant(&variants) else {
-                return Ok(None);
-            };
-            let mut item = ResourceItem {
-                id,
-                kind: ResourceKind::Animation,
-                preferred_url: preferred.url.clone(),
-                preview_url: Some(photo.url.clone()),
-                width: Some(photo.width),
-                height: Some(photo.height),
-                duration_ms: None,
-                variants,
-            };
-            ensure_item_urls(&mut item)?;
-            return Ok(Some(item));
-        }
+    if photo.kind == "gif"
+        && let Some(transcode_url) = photo.transcode_url.as_deref()
+    {
+        let container = container_from_url(transcode_url);
+        let mut variants = vec![ResourceVariant {
+            url: transcode_url.to_owned(),
+            mime_type: mime_for_container(container.as_deref()),
+            container,
+            codec: None,
+            bitrate: None,
+            size_bytes: None,
+            width: Some(photo.width),
+            height: Some(photo.height),
+        }];
+        sort_variants(&mut variants);
+        let Some(preferred) = preferred_variant(&variants) else {
+            return Ok(None);
+        };
+        let mut item = ResourceItem {
+            id,
+            kind: ResourceKind::Animation,
+            preferred_url: preferred.url.clone(),
+            preview_url: Some(photo.url.clone()),
+            width: Some(photo.width),
+            height: Some(photo.height),
+            duration_ms: None,
+            variants,
+        };
+        ensure_item_urls(&mut item)?;
+        return Ok(Some(item));
     }
 
     let preferred_url = original_image_url_for_host(&photo.url, IMAGE_HOST)?;

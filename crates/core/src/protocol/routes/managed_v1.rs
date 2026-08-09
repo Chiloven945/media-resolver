@@ -60,10 +60,10 @@ impl ResolverAdapter for ManagedV1Adapter<'_> {
 
     fn process(&self, input: &InputDescriptor, status: u16, body: &[u8]) -> AdapterOutcome {
         let value: Option<Value> = serde_json::from_slice(body).ok();
-        if let Some(value) = value.as_ref() {
-            if let Ok(envelope) = serde_json::from_value::<ManagedErrorEnvelope>(value.clone()) {
-                return classify_error_code(&envelope.error.code);
-            }
+        if let Some(value) = value.as_ref()
+            && let Ok(envelope) = serde_json::from_value::<ManagedErrorEnvelope>(value.clone())
+        {
+            return classify_error_code(&envelope.error.code);
         }
 
         if let Some(outcome) = classify_http_status(status) {

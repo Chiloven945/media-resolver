@@ -55,7 +55,7 @@ fn request(
     match step {
         ResolutionStep::Request {
             session, request, ..
-        } => (session, request),
+        } => (session, *request),
         other => panic!("expected request step, got {other:?}"),
     }
 }

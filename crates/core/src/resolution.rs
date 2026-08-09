@@ -103,7 +103,7 @@ impl From<RouteFailure> for SerializableRouteFailure {
 pub enum ResolutionStep {
     Request {
         session: ResolutionSession,
-        request: PreparedRequest,
+        request: Box<PreparedRequest>,
         #[serde(rename = "sourceKey")]
         source_key: String,
         #[serde(rename = "normalizedInput")]
@@ -179,7 +179,7 @@ fn request_current(session: ResolutionSession) -> Result<ResolutionStep, Resolve
         source_key: session.descriptor.source_key.clone(),
         normalized_input: session.descriptor.normalized_input.clone(),
         session,
-        request,
+        request: Box::new(request),
     })
 }
 
