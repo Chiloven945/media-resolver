@@ -1,0 +1,48 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+:root {
+    --ui-radius: 0.75rem;
+    --ui-header-height: 3.75rem;
+}
+
+html,
+body,
+#__nuxt {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(circle at 15% -10%, color-mix(in srgb, var(--ui-primary) 10%, transparent), transparent 35rem),
+    var(--ui-bg);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ui-text-muted) 28%, transparent) transparent;
+}
+
+.resource-media {
+    aspect-ratio: 16 / 10;
+    width: 100%;
+    overflow: hidden;
+    background: var(--ui-bg-muted);
+}
+
+.workspace-grid {
+    min-height: 100dvh;
+}
+
+@media (max-width: 1023px) {
+    .desktop-task-panel {
+        display: none !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .desktop-task-panel {
+        min-width: 20rem;
+        max-width: 23.75rem;
+    }
+}

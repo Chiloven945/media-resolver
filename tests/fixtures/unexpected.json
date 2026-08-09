@@ -1,0 +1,11 @@
+{
+  "__typename": "Tweet",
+  "mediaDetails": [
+    {
+      "type": "video",
+      "video_info": {
+        "variants": []
+      }
+    }
+  ]
+}

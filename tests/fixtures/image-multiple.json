@@ -1,0 +1,21 @@
+{
+  "__typename": "Tweet",
+  "mediaDetails": [
+    {
+      "media_url_https": "https://pbs.twimg.com/media/one.png",
+      "original_info": {
+        "height": 900,
+        "width": 1200
+      },
+      "type": "photo"
+    },
+    {
+      "media_url_https": "https://pbs.twimg.com/media/two.webp",
+      "original_info": {
+        "height": 1200,
+        "width": 800
+      },
+      "type": "photo"
+    }
+  ]
+}

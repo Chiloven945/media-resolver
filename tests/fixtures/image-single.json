@@ -1,0 +1,15 @@
+{
+  "__typename": "Tweet",
+  "id_str": "2011590242474893548",
+  "mediaDetails": [
+    {
+      "media_url_https": "https://pbs.twimg.com/media/G-qZyDQacAA1esn.jpg",
+      "original_info": {
+        "height": 2048,
+        "width": 2048,
+        "focus_rects": []
+      },
+      "type": "photo"
+    }
+  ]
+}

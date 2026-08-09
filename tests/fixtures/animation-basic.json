@@ -1,0 +1,22 @@
+{
+  "__typename": "Tweet",
+  "mediaDetails": [
+    {
+      "media_url_https": "https://pbs.twimg.com/tweet_video_thumb/example.jpg",
+      "original_info": {
+        "height": 700,
+        "width": 700
+      },
+      "type": "animated_gif",
+      "video_info": {
+        "variants": [
+          {
+            "bitrate": 0,
+            "content_type": "video/mp4",
+            "url": "https://video.twimg.com/tweet_video/example.mp4"
+          }
+        ]
+      }
+    }
+  ]
+}
