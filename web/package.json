@@ -11,7 +11,7 @@
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright install chromium webkit && playwright test",
     "wasm:build": "cd ../crates/wasm && wasm-pack build --target web --release --out-dir ../../web/public/wasm --out-name engine",
     "wasm:clean": "rm -f public/wasm/engine.js public/wasm/engine_bg.wasm public/wasm/engine.d.ts public/wasm/engine_bg.wasm.d.ts public/wasm/package.json"
   },

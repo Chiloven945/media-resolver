@@ -57,9 +57,9 @@ jobs:
       - name: Unit tests
         working-directory: web
         run: bun run test
-      - name: Install Chromium
+      - name: Install Playwright browsers
         working-directory: web
-        run: bunx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium webkit
       - name: End-to-end tests
         working-directory: web
         run: bun run test:e2e
