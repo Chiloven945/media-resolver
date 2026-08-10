@@ -36,7 +36,7 @@ crates/wasm   Thin wasm-bindgen state-machine bridge
 web           Nuxt UI single-page application and browser transport executor
 tests         Route compatibility fixtures used by Rust tests
 docs          Maintainer-facing protocol documentation
-.github       CI, static deployment, and optional route smoke checks
+.github       CI and optional route smoke checks
 ```
 
 Source-specific implementation details are confined to protocol source/route/schema modules,
@@ -176,8 +176,7 @@ bun run wasm:build
 bun run generate
 ```
 
-The generated site is written to `web/.output/public` and can be served by a static host. Set
-`NUXT_APP_BASE_URL` when the site is hosted below a path prefix.
+The generated site is written to `web/.output/public` and can be served by a static host.
 
 ## Browser task behavior
 
