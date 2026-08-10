@@ -5,8 +5,7 @@ A Rust-powered resolver for supported links, available as a native CLI and a bro
 Version **0.1.0** uses a Rust-owned multi-route resolution engine. Input validation, route ordering,
 fallback policy, response classification, and resource normalization all live in the shared core.
 The CLI and browser are transport executors: they perform the requested HTTP operation and return
-the outcome to Rust. The browser build remains a static Nuxt application with a thin WebAssembly
-bridge.
+the outcome to Rust. The browser remains a static Nuxt SPA with a thin WebAssembly bridge.
 
 ## Features
 
@@ -26,23 +25,6 @@ bridge.
 - System-aware light and dark themes
 - Static deployment with no application server requirement
 - No embedded credentials, API keys, analytics, or open proxy
-
-## Repository layout
-
-```text
-crates/core   Source inspection, resolution state machine, route adapters, normalization
-crates/cli    Native HTTP transport, concurrency, and terminal/JSON output
-crates/wasm   Thin wasm-bindgen state-machine bridge
-web           Nuxt UI single-page application and browser transport executor
-tests         Route compatibility fixtures used by Rust tests
-docs          Maintainer-facing protocol documentation
-.github       CI and optional route smoke checks
-```
-
-Source-specific implementation details are confined to protocol source/route/schema modules,
-protocol fixtures, and maintainer documentation. Public Rust models, WASM exports, TypeScript
-interfaces, Vue components, CLI copy, README product copy, and user-facing application text use
-neutral resource terminology.
 
 ## Requirements
 
@@ -143,41 +125,6 @@ WASM does not perform HTTP. Browser CORS/network failures are converted into tra
 returned to the Rust engine, which decides whether another route should be attempted. A task only
 enters the failed state after the resolution session itself becomes terminal.
 
-### Optional managed service
-
-A deployment can add a managed route without changing or rebuilding the Rust engine API:
-
-```bash
-NUXT_PUBLIC_RESOLVER_ENDPOINT=https://resolver.example.dev
-```
-
-The endpoint is public configuration, not a secret. The expected contracts are intentionally narrow:
-
-```text
-GET {endpoint}/v1/resources/{numeric-source-key}
-GET {endpoint}/v1/download/{numeric-source-key}/{resource-id}
-GET {endpoint}/v1/download/{numeric-source-key}/{resource-id}?variant={zero-based-index}
-```
-
-The resource endpoint must use the neutral `ResourceBundle` schema. The download endpoint resolves
-the resource identifier server-side and returns the selected representation as an attachment;
-callers never supply an arbitrary upstream URL, host, method, or header. The configured endpoint
-must be HTTPS and may not contain user-info, query parameters, or fragments. It is not an arbitrary
-URL proxy.
-
-No token or API credential belongs in `NUXT_PUBLIC_RESOLVER_ENDPOINT`, the Nuxt bundle, or WASM.
-Secrets needed by a managed service must remain in that service's secret storage.
-
-### Static generation
-
-```bash
-cd web
-bun run wasm:build
-bun run generate
-```
-
-The generated site is written to `web/.output/public` and can be served by a static host.
-
 ## Browser task behavior
 
 - Tasks are scheduled with a configurable concurrency of 1–8.
@@ -247,52 +194,6 @@ bun run generate
 
 Normal tests mock transport. The non-blocking protocol smoke workflow uses optional repository
 variables for live route health checks and does not gate pull requests.
-
-## Build principles
-
-- Rust is the single source of truth for input validation, route selection, fallback, error
-  classification, and normalization.
-- CLI and browser transports never encode provider-specific fallback rules.
-- WASM remains a serialization/FFI boundary, not a networking layer.
-- Nuxt owns queue state, generic transport execution, cancellation, and presentation.
-- Route keys are opaque outside the Rust core.
-- Raw remote bodies never enter Vue task state.
-- Resource URLs are validated as HTTPS before they are exposed to callers.
-- User-facing errors are mapped from stable neutral error codes rather than raw remote messages.
-- Source identifiers remain strings across Rust, WASM, and TypeScript.
-- Explicit restricted access is terminal for anonymous routes.
-
-## 0.1.0 scope
-
-Included:
-
-- supported canonical and alternate link forms
-- multiple automatic resolution routes
-- optional managed resolution and download gateway contracts
-- image, video, and animation resources
-- preferred selection across direct and streaming variants
-- native CLI and JSON output
-- WebAssembly state-machine bridge
-- Nuxt UI task workspace
-- multiple concurrent tasks
-- cancellation, retry policy, route health, deduplication, and memory caches
-- advanced manual recovery
-- responsive desktop/mobile interface
-- light/dark mode
-- static deployment
-
-Explicitly out of scope:
-
-- accounts or user authorization
-- required application server
-- persistent task history
-- arbitrary/open proxy endpoints
-- ZIP export
-- browser extension or PWA
-- analytics
-- localization framework
-
-Maintainers can find route-specific compatibility notes in `docs/protocol.md`.
 
 ## License
 

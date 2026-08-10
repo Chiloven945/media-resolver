@@ -19,3 +19,7 @@ web/public/wasm/package.json
 .env
 .env.*
 !.env.example
+web/dist/
+worker/pkg/
+
+.wrangler-dist/

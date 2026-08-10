@@ -7,6 +7,7 @@ use crate::{
         accept_response as resolution_accept_response,
         accept_transport_failure as resolution_accept_transport_failure,
         start_resolution as resolution_start,
+        start_resolution_from_key as resolution_start_from_key,
     },
 };
 
@@ -19,6 +20,13 @@ pub fn start_resolution(
     options: ResolutionOptions,
 ) -> Result<ResolutionStep, ResolveError> {
     resolution_start(input, options)
+}
+
+pub fn start_resolution_from_key(
+    source_key: &str,
+    options: ResolutionOptions,
+) -> Result<ResolutionStep, ResolveError> {
+    resolution_start_from_key(source_key, options)
 }
 
 pub fn accept_response(

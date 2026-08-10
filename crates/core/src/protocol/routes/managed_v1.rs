@@ -24,7 +24,10 @@ impl<'a> ManagedV1Adapter<'a> {
 
 pub(crate) fn validate_endpoint(endpoint: &str) -> Result<(), ResolveError> {
     let url = Url::parse(endpoint).map_err(|_| ResolveError::Internal)?;
-    if url.scheme() != "https"
+    let secure = url.scheme() == "https";
+    let loopback =
+        url.scheme() == "http" && matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "::1"));
+    if (!secure && !loopback)
         || url.host_str().is_none()
         || !url.username().is_empty()
         || url.password().is_some()

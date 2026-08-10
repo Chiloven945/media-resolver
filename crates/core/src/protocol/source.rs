@@ -48,6 +48,14 @@ pub(crate) fn inspect_source(input: &str) -> Result<InputDescriptor, ResolveErro
     })
 }
 
+pub(crate) fn descriptor_from_key(source_key: &str) -> Result<InputDescriptor, ResolveError> {
+    validate_source_key(source_key)?;
+    Ok(InputDescriptor {
+        source_key: source_key.to_owned(),
+        normalized_input: format!("https://{CANONICAL_HOST}/i/status/{source_key}"),
+    })
+}
+
 pub(crate) fn validate_source_key(source_key: &str) -> Result<(), ResolveError> {
     if source_key.len() < 2
         || source_key.len() > MAX_SOURCE_KEY_LENGTH

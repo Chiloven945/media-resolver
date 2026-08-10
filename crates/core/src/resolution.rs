@@ -126,6 +126,21 @@ pub fn start_resolution(
     options: ResolutionOptions,
 ) -> Result<ResolutionStep, ResolveError> {
     let descriptor = input::inspect(input_value)?;
+    start_with_descriptor(descriptor, options)
+}
+
+pub fn start_resolution_from_key(
+    source_key: &str,
+    options: ResolutionOptions,
+) -> Result<ResolutionStep, ResolveError> {
+    let descriptor = crate::protocol::source::descriptor_from_key(source_key)?;
+    start_with_descriptor(descriptor, options)
+}
+
+fn start_with_descriptor(
+    descriptor: InputDescriptor,
+    options: ResolutionOptions,
+) -> Result<ResolutionStep, ResolveError> {
     let routes = registry::build_routes(&options)?;
     let session = ResolutionSession {
         schema_version: 1,

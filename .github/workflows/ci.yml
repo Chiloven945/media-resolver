@@ -66,3 +66,12 @@ jobs:
       - name: Static generation
         working-directory: web
         run: bun run generate
+      - name: Build Worker WASM
+        working-directory: crates/wasm
+        run: wasm-pack build --target bundler --release --out-dir ../../worker/pkg --out-name engine
+      - name: Patch Worker WASM glue
+        run: node scripts/patch-worker-wasm.mjs worker/pkg/engine.js
+      - name: Type check Worker
+        run: web/node_modules/.bin/tsc -p worker/tsconfig.json
+      - name: Check Cloudflare Worker bundle
+        run: npx --yes wrangler@4 deploy --dry-run --outdir .wrangler-dist

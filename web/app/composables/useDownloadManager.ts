@@ -3,6 +3,7 @@ import type { DownloadResult, ResourceDownload } from "~/types/download";
 import { requireHttps } from "~/composables/useResourceActions";
 import { resourceFilename } from "~/utils/resource-filename";
 import { buildManagedDownloadUrl } from "~/utils/download";
+import { resolverEndpoint } from "~/utils/resolver-endpoint";
 
 interface DownloadOptions {
     resourceIndex: number;
@@ -78,7 +79,7 @@ export function useDownloadManager() {
         }
 
         const gateway = buildManagedDownloadUrl(
-                String(config.public.resolverEndpoint || ""),
+                resolverEndpoint(config.public.resolverEndpoint) || "",
                 sourceKey,
                 resource.id,
                 options.variantIndex

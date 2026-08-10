@@ -6,7 +6,10 @@ const runtimeEnvironment = (
         }
 ).process?.env ?? {};
 
-const buildHash = runtimeEnvironment.NUXT_PUBLIC_BUILD_HASH || "development";
+const buildHash =
+        runtimeEnvironment.NUXT_PUBLIC_BUILD_HASH
+        || runtimeEnvironment.WORKERS_CI_COMMIT_SHA?.slice(0, 7)
+        || "development";
 const resolverEndpoint = runtimeEnvironment.NUXT_PUBLIC_RESOLVER_ENDPOINT || "";
 
 export default defineNuxtConfig({

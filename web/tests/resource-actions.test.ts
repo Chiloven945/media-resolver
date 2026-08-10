@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ResourceItem } from "../app/types/engine";
 import { resourceFilename } from "../app/utils/resource-filename";
 import { buildManagedDownloadUrl } from "../app/utils/download";
+import { normalizeResolverEndpoint, resolverEndpoint } from "../app/utils/resolver-endpoint";
 
 const image: ResourceItem = {
     id: "a",
@@ -59,10 +60,33 @@ describe("managed download URL", () => {
                 .toBe("https://resolver.example/base/v1/download/123/item%3A1?variant=2");
     });
 
-    it("rejects non-HTTPS and pre-parameterized endpoints", () => {
+    it("rejects insecure remote and pre-parameterized endpoints", () => {
         expect(buildManagedDownloadUrl("http://resolver.example", "123", "item", 0))
                 .toBeUndefined();
         expect(buildManagedDownloadUrl("https://resolver.example?target=x", "123", "item", 0))
+                .toBeUndefined();
+    });
+
+    it("allows loopback HTTP for local Worker development", () => {
+        expect(buildManagedDownloadUrl("http://127.0.0.1:8787", "123", "item", 0))
+                .toBe("http://127.0.0.1:8787/v1/download/123/item?variant=0");
+    });
+});
+
+describe("resolver endpoint normalization", () => {
+    it("does not resolve same-origin during server-side evaluation", () => {
+        expect(resolverEndpoint("same-origin")).toBeUndefined();
+    });
+
+    it("keeps safe HTTPS endpoints and strips a trailing slash", () => {
+        expect(normalizeResolverEndpoint("https://resolver.example/base/"))
+                .toBe("https://resolver.example/base");
+    });
+
+    it("allows only loopback hosts over HTTP", () => {
+        expect(normalizeResolverEndpoint("http://localhost:8787"))
+                .toBe("http://localhost:8787");
+        expect(normalizeResolverEndpoint("http://resolver.example"))
                 .toBeUndefined();
     });
 });

@@ -7,6 +7,7 @@ import type {
     TransportFailureKind
 } from "~/types/resolution";
 import { executeRequest, type TransportResult } from "~/utils/transport";
+import { resolverEndpoint } from "~/utils/resolver-endpoint";
 
 interface InspectionResult {
     sourceKey: string;
@@ -53,10 +54,9 @@ export function useResolverExecutor() {
     const config = useRuntimeConfig();
 
     const resolutionOptions = (): ResolutionOptions => {
-        const endpoint = String(config.public.resolverEndpoint || "").trim();
         return {
             profile: "browser",
-            gatewayEndpoint: endpoint || undefined
+            gatewayEndpoint: resolverEndpoint(config.public.resolverEndpoint)
         };
     };
 

@@ -1,7 +1,7 @@
 use media_resolver_core::{
+    accept_response, accept_transport_failure, inspect_input, start_resolution, start_resolution_from_key,
     ResolutionOptions, ResolutionStep, ResolveError, ResolveErrorCode, ResourceKind,
-    RuntimeProfile, TransportFailure, accept_response, accept_transport_failure, inspect_input,
-    start_resolution,
+    RuntimeProfile, TransportFailure,
 };
 
 const INPUT_CANONICAL: &str = include_str!("../../../tests/fixtures/input-canonical.txt");
@@ -92,6 +92,22 @@ fn rejects_invalid_and_unsupported_inputs() {
     assert_eq!(
         inspect_input(INPUT_MISSING_KEY.trim()),
         Err(ResolveError::UnsupportedInput)
+    );
+}
+
+#[test]
+fn can_start_resolution_from_a_valid_source_key() {
+    let step = start_resolution_from_key("2011590242474893548", options(None)).unwrap();
+    let (_, request) = request(step);
+    assert_eq!(request.route_key, "r0");
+    assert!(request.url.contains("/2/status/2011590242474893548"));
+}
+
+#[test]
+fn rejects_invalid_source_key_for_direct_start() {
+    assert_eq!(
+        start_resolution_from_key("not-a-key", options(None)),
+        Err(ResolveError::InvalidInput)
     );
 }
 
@@ -336,6 +352,15 @@ fn legacy_video_is_still_supported_and_keeps_hls() {
         }
         other => panic!("expected resolved step, got {other:?}"),
     }
+}
+
+#[test]
+fn managed_gateway_allows_loopback_http_for_local_development() {
+    let result = start_resolution(
+        INPUT_CANONICAL.trim(),
+        options(Some("http://127.0.0.1:8787")),
+    );
+    assert!(result.is_ok());
 }
 
 #[test]

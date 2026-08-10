@@ -1,6 +1,6 @@
 use media_resolver_core::{
     ResolutionOptions, ResolutionSession, ResolveError, TransportFailure, accept_response,
-    accept_transport_failure, start_resolution,
+    accept_transport_failure, start_resolution, start_resolution_from_key,
 };
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -16,6 +16,14 @@ pub fn start(input: &str, options: JsValue) -> Result<JsValue, JsValue> {
     let options: ResolutionOptions =
         serde_wasm_bindgen::from_value(options).map_err(|_| to_js_error(ResolveError::Internal))?;
     let step = start_resolution(input, options).map_err(to_js_error)?;
+    serialize_step(&step)
+}
+
+#[wasm_bindgen]
+pub fn start_key(source_key: &str, options: JsValue) -> Result<JsValue, JsValue> {
+    let options: ResolutionOptions =
+        serde_wasm_bindgen::from_value(options).map_err(|_| to_js_error(ResolveError::Internal))?;
+    let step = start_resolution_from_key(source_key, options).map_err(to_js_error)?;
     serialize_step(&step)
 }
 
