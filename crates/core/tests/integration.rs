@@ -1,7 +1,7 @@
 use media_resolver_core::{
-    accept_response, accept_transport_failure, inspect_input, start_resolution, start_resolution_from_key,
     ResolutionOptions, ResolutionStep, ResolveError, ResolveErrorCode, ResourceKind,
-    RuntimeProfile, TransportFailure,
+    RuntimeProfile, TransportFailure, accept_response, accept_transport_failure, inspect_input,
+    start_resolution, start_resolution_from_key,
 };
 
 const INPUT_CANONICAL: &str = include_str!("../../../tests/fixtures/input-canonical.txt");
