@@ -10,8 +10,16 @@ export default defineConfig({
         trace: "retain-on-failure"
     },
     projects: [
-        { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-        { name: "mobile", use: { ...devices["iPhone 13"] } }
+        {
+            name: "desktop",
+            grepInvert: /@mobile/,
+            use: { ...devices["Desktop Chrome"] }
+        },
+        {
+            name: "mobile",
+            grep: /@mobile/,
+            use: { ...devices["iPhone 13"] }
+        }
     ],
     webServer: {
         command: "bun run dev --host 127.0.0.1 --port 3000",

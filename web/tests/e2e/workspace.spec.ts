@@ -638,24 +638,30 @@ test(
         }
 );
 
-test("mobile task drawer creates a task and closes on selection", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "mobile");
-    await page.getByLabel("Open tasks").click();
-    await expect(page.getByText("Manage active and completed tasks.")).toBeVisible();
+test(
+        "mobile task drawer creates a task and closes on selection",
+        { tag: "@mobile" },
+        async ({ page }) => {
+            await page.getByLabel("Open tasks").click();
+            await expect(page.getByText("Manage active and completed tasks.")).toBeVisible();
 
-    const drawer = page.getByRole("dialog");
-    const input = drawer.getByLabel("Supported link");
-    await expect(input).toBeEnabled();
-    await input.fill("https://example.test/user/status/6001");
-    await input.press("Enter");
-    await expect(input).toHaveValue("");
-    await expect(page.getByText("Manage active and completed tasks.")).not.toBeVisible();
-    await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
+            const drawer = page.getByRole("dialog");
+            const input = drawer.getByLabel("Supported link");
+            await expect(input).toBeEnabled();
+            await input.fill("https://example.test/user/status/6001");
+            await input.press("Enter");
+            await expect(input).toHaveValue("");
+            await expect(page.getByText("Manage active and completed tasks.")).not.toBeVisible();
+            await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
 
-    await page.getByLabel("Open tasks").click();
-    await page.getByRole("dialog").locator("[data-task-sequence=\"1\"] button").first().click();
-    await expect(page.getByText("Manage active and completed tasks.")).not.toBeVisible();
-});
+            await page.getByLabel("Open tasks").click();
+            await page.getByRole("dialog")
+                    .locator("[data-task-sequence=\"1\"] button")
+                    .first()
+                    .click();
+            await expect(page.getByText("Manage active and completed tasks.")).not.toBeVisible();
+        }
+);
 
 test(
         "single resource uses the detail workspace instead of a card grid",
@@ -856,18 +862,20 @@ test("color mode control switches the semantic theme", async ({ page }, testInfo
             .toBe(before);
 });
 
-test("mobile detail keeps download as the primary action", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "mobile");
-    await page.getByLabel("Open tasks").click();
-    const drawer = page.getByRole("dialog");
-    const input = drawer.getByLabel("Supported link");
-    await expect(input).toBeEnabled();
-    await input.fill("https://example.test/user/status/7001");
-    await input.press("Enter");
-    await expect(input).toHaveValue("");
+test(
+        "mobile detail keeps download as the primary action",
+        { tag: "@mobile" },
+        async ({ page }) => {
+            await page.getByLabel("Open tasks").click();
+            const drawer = page.getByRole("dialog");
+            const input = drawer.getByLabel("Supported link");
+            await expect(input).toBeEnabled();
+            await input.fill("https://example.test/user/status/7001");
+            await input.press("Enter");
+            await expect(input).toHaveValue("");
 
-    await expect(page.getByTestId("resource-detail")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Download", exact: true })).toBeVisible();
-    await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
-});
-
+            await expect(page.getByTestId("resource-detail")).toBeVisible();
+            await expect(page.getByRole("button", { name: "Download", exact: true })).toBeVisible();
+            await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
+        }
+);
