@@ -1,43 +1,40 @@
 <script lang="ts" setup>
 import AppHeader from "~/components/shell/AppHeader.vue";
-import MobileTaskDrawer from "~/components/shell/MobileTaskDrawer.vue";
+import MobileTasksView from "~/components/task/MobileTasksView.vue";
 
-const mobileTasksOpen = ref(false);
+const { pane, openResult, openTasks } = useMobileNavigation();
 const { selectedTask } = useTaskSelection();
+
+watch(selectedTask, task => {
+  if (!task && pane.value === "result") {
+    openTasks();
+  }
+});
 </script>
 
 <template>
   <div class="app-shell flex flex-col bg-default">
-    <AppHeader @open-tasks="mobileTasksOpen = true"/>
+    <AppHeader/>
 
-    <UDashboardGroup
-        :ui="{ base: 'relative inset-auto min-h-0 flex-1' }"
-        class="workspace-grid min-h-0 flex-1"
-    >
-      <UDashboardSidebar
-          id="tasks"
-          :default-size="22"
-          :max-size="24"
-          :min-size="18"
-          :toggle="false"
-          :ui="{ root: 'border-r border-default bg-elevated/30', body: 'p-0 sm:p-0' }"
-          class="desktop-task-panel"
-          resizable
+    <div class="flex min-h-0 flex-1">
+      <aside
+          class="desktop-task-panel hidden w-[22.5rem] shrink-0 border-r border-default bg-elevated/20 lg:flex lg:flex-col"
       >
         <TaskSidebar/>
-      </UDashboardSidebar>
+      </aside>
 
-      <UDashboardPanel
-          id="workspace"
-          :ui="{ body: 'min-h-0 flex-1 overflow-hidden p-0 sm:p-0' }"
-          class="min-h-0 min-w-0 overflow-hidden bg-default"
-      >
-        <template #body>
-          <ResultView :task="selectedTask"/>
-        </template>
-      </UDashboardPanel>
-    </UDashboardGroup>
+      <main class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-default">
+        <div v-show="pane === 'tasks'" class="h-full min-h-0 lg:hidden">
+          <MobileTasksView @selected="openResult"/>
+        </div>
+
+        <div
+            :class="pane === 'result' ? 'flex' : 'hidden lg:flex'"
+            class="h-full min-h-0 flex-col"
+        >
+          <ResultView :key="`${selectedTask?.id || 'empty'}-${pane}`" :task="selectedTask"/>
+        </div>
+      </main>
+    </div>
   </div>
-
-  <MobileTaskDrawer v-model:open="mobileTasksOpen"/>
 </template>

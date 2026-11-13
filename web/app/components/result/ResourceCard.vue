@@ -5,12 +5,18 @@ import { displayDimensions, formatSummary, resourceKindLabel } from "~/utils/res
 import VariantList from "~/components/result/VariantList.vue";
 import ResourceViewer from "~/components/result/ResourceViewer.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   resource: ResourceItem;
   sourceKey: string;
   resourceIndex: number;
   resourceCount: number;
-}>();
+  selecting?: boolean;
+  selected?: boolean;
+}>(), {
+  selecting: false,
+  selected: false
+});
+const emit = defineEmits<{ toggleSelection: [] }>();
 const variantsOpen = ref(false);
 const toast = useToast();
 const actions = useResourceActions();
@@ -93,44 +99,63 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
 
 <template>
   <UCard
+      :class="selected ? 'ring-2 ring-primary' : ''"
       :ui="{ body: 'p-0 sm:p-0', footer: 'p-3 sm:px-3' }"
       class="overflow-hidden"
       data-testid="resource-card"
   >
-    <ResourceViewer :resource="resource" compact/>
-
-    <div class="space-y-2 p-3">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <div class="truncate text-sm font-semibold text-highlighted">
-            {{ resourceKindLabel(resource.kind) }} · {{
-              displayDimensions(resource.width, resource.height)
-            }}
-          </div>
-          <p v-if="formatSummary(displayVariant)" class="mt-1 truncate text-xs text-muted">
-            {{ formatSummary(displayVariant) }}
-          </p>
+    <div class="flex gap-3 p-3 sm:block sm:p-0">
+      <div
+          class="relative h-28 w-28 shrink-0 overflow-hidden rounded-lg sm:h-auto sm:w-full sm:rounded-none"
+      >
+        <ResourceViewer :compact="true" :resource="resource" class="h-28! min-h-0! sm:h-56!"/>
+        <div
+            v-if="selecting"
+            class="absolute left-2 top-2 z-10 rounded-md border border-default bg-default/90 p-1 shadow-sm"
+            @click.stop
+        >
+          <UCheckbox
+              aria-label="Select resource"
+              :model-value="selected"
+              @update:model-value="emit('toggleSelection')"
+          />
         </div>
-        <span v-if="resource.variants.length > 1" class="shrink-0 text-xs text-muted">
-          {{ resource.variants.length }} variants
-        </span>
       </div>
-      <UProgress
-          v-if="downloadState.state === 'downloading'"
-          :animation="downloadState.progress === undefined ? 'carousel' : undefined"
-          :model-value="downloadState.progress"
-          size="xs"
-      />
+
+      <div class="min-w-0 flex-1 space-y-2 sm:p-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="truncate text-sm font-semibold text-highlighted">
+              {{ resourceKindLabel(resource.kind) }} · {{
+                displayDimensions(resource.width, resource.height)
+              }}
+            </div>
+            <p v-if="formatSummary(displayVariant)" class="mt-1 truncate text-xs text-muted">
+              {{ formatSummary(displayVariant) }}
+            </p>
+          </div>
+          <span v-if="resource.variants.length > 1" class="shrink-0 text-xs text-muted">
+            {{ resource.variants.length }} variants
+          </span>
+        </div>
+        <UProgress
+            v-if="downloadState.state === 'downloading'"
+            :animation="downloadState.progress === undefined ? 'carousel' : undefined"
+            :model-value="downloadState.progress"
+            size="xs"
+        />
+      </div>
     </div>
 
     <template #footer>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center justify-between gap-2">
         <UButton
             :disabled="busy"
             :icon="busy ? 'i-lucide-loader-circle' : 'i-lucide-download'"
             :label="downloadLabel"
             :loading="busy"
-            class="flex-1"
+            size="sm"
+            variant="soft"
             @click="startDownload"
         />
         <UDropdownMenu :items="menuItems">
@@ -138,6 +163,7 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
               aria-label="Resource actions"
               color="neutral"
               icon="i-lucide-ellipsis"
+              size="sm"
               variant="ghost"
           />
         </UDropdownMenu>

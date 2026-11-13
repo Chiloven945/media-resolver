@@ -13,12 +13,12 @@ function sourceKey(input) {
 
 function makeRoutes(key, options) {
     const routes = [
-        {routeKey: 'r0', url: \`https://primary.invalid/${key}\`}
+        {routeKey: 'r0', url: 'https://primary.invalid/' + key}
     ]
     if (options?.gatewayEndpoint) {
-        routes.push({routeKey: 'r1', url: \`https://managed.invalid/v1/resources/${key}\`})
+        routes.push({routeKey: 'r1', url: 'https://managed.invalid/v1/resources/' + key})
     }
-    routes.push({routeKey: \`r\${routes.length}\`, url: \`https://legacy.invalid/${key}\`})
+    routes.push({routeKey: 'r' + routes.length, url: 'https://legacy.invalid/' + key})
     return routes
 }
 
@@ -28,7 +28,7 @@ function requestStep(session) {
         kind: 'request',
         session,
         sourceKey: session.key,
-        normalizedInput: \`https://example.invalid/item/${session.key}\`,
+        normalizedInput: 'https://example.invalid/item/' + session.key,
         request: {
             routeKey: route.routeKey,
             url: route.url,
@@ -75,15 +75,15 @@ function resultFor(key) {
             schemaVersion: 1,
             sourceKey: key,
             resources: [{
-                id: \`\${key}:video\`,
+                id: key + ':video',
                 kind: 'video',
-                preferredUrl: \`https://assets.invalid/${key}-720.mp4\`,
-                previewUrl: \`https://assets.invalid/${key}-preview.jpg\`,
+                preferredUrl: 'https://assets.invalid/' + key + '-720.mp4',
+                previewUrl: 'https://assets.invalid/' + key + '-preview.jpg',
                 width: 720,
                 height: 1280,
                 variants: [
                     {
-                        url: \`https://assets.invalid/${key}-720.mp4\`,
+                        url: 'https://assets.invalid/' + key + '-720.mp4',
                         mimeType: 'video/mp4',
                         container: 'mp4',
                         codec: 'h264',
@@ -93,7 +93,7 @@ function resultFor(key) {
                         height: 1280
                     },
                     {
-                        url: \`https://assets.invalid/${key}-480.mp4\`,
+                        url: 'https://assets.invalid/' + key + '-480.mp4',
                         mimeType: 'video/mp4',
                         container: 'mp4',
                         codec: 'h264',
@@ -112,14 +112,14 @@ function resultFor(key) {
             schemaVersion: 1,
             sourceKey: key,
             resources: [1, 2].map(index => ({
-                id: \`\${key}:\${index}\`,
+                id: key + ':' + index,
                 kind: 'image',
-                preferredUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
-                previewUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                preferredUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
+                previewUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
                 width: 1200,
                 height: 800,
                 variants: [{
-                    url: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                    url: 'https://assets.invalid/' + key + '-' + index + '.jpg',
                     mimeType: 'image/jpeg',
                     container: 'jpg',
                     width: 1200,
@@ -136,14 +136,14 @@ function resultFor(key) {
             resources: Array.from({length: 12}, (_, offset) => {
                 const index = offset + 1
                 return {
-                    id: \`\${key}:\${index}\`,
+                    id: key + ':' + index,
                     kind: 'image',
-                    preferredUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
-                    previewUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                    preferredUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
+                    previewUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
                     width: 1200,
                     height: 800,
                     variants: [{
-                        url: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                        url: 'https://assets.invalid/' + key + '-' + index + '.jpg',
                         mimeType: 'image/jpeg',
                         container: 'jpg',
                         width: 1200,
@@ -158,14 +158,14 @@ function resultFor(key) {
         schemaVersion: 1,
         sourceKey: key,
         resources: [{
-            id: \`\${key}:1\`,
+            id: key + ':1',
             kind: 'image',
-            preferredUrl: \`https://assets.invalid/${key}.jpg\`,
-            previewUrl: \`https://assets.invalid/${key}.jpg\`,
+            preferredUrl: 'https://assets.invalid/' + key + '.jpg',
+            previewUrl: 'https://assets.invalid/' + key + '.jpg',
             width: 1200,
             height: 800,
             variants: [{
-                url: \`https://assets.invalid/${key}.jpg\`,
+                url: 'https://assets.invalid/' + key + '.jpg',
                 mimeType: 'image/jpeg',
                 container: 'jpg',
                 width: 1200,
@@ -232,17 +232,17 @@ async function setup(page: Page) {
         return route.fulfill({
             status: 200,
             contentType: isVideo
-                    ? "video/mp4"
-                    : "image/jpeg",
+                ? "video/mp4"
+                : "image/jpeg",
             headers: {
                 "access-control-allow-origin": "*",
                 "content-length": isVideo
-                        ? "16"
-                        : "12"
+                    ? "16"
+                    : "12"
             },
             body: isVideo
-                    ? "mock-video-bytes"
-                    : "mock-image!!"
+                ? "mock-video-bytes"
+                : "mock-image!!"
         });
     });
 }
@@ -265,34 +265,34 @@ test.beforeEach(async ({ page }) => {
 });
 
 test(
-        "desktop uses one global header and a constrained task sidebar",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await expect(page.getByTestId("app-header")).toBeVisible({ timeout: 15_000 });
-            await expect(page.getByTestId("app-header")).toHaveCount(1);
-            await expect(page.locator(".desktop-task-panel")).toBeVisible();
-            const box = await page.locator(".desktop-task-panel").boundingBox();
-            expect(box).not.toBeNull();
-            expect(box!.width).toBeGreaterThanOrEqual(279);
-            expect(box!.width).toBeLessThanOrEqual(381);
-        }
+    "desktop uses one global header and a constrained task sidebar",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await expect(page.getByTestId("app-header")).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByTestId("app-header")).toHaveCount(1);
+        await expect(page.locator(".desktop-task-panel")).toBeVisible();
+        const box = await page.locator(".desktop-task-panel").boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width).toBeGreaterThanOrEqual(279);
+        expect(box!.width).toBeLessThanOrEqual(381);
+    }
 );
 
 test(
-        "result header starts below the global application header",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await addTask(page, "1000");
+    "result header starts below the global application header",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await addTask(page, "1000");
 
-            const appHeader = await page.getByTestId("app-header").boundingBox();
-            const resultHeader = await page.getByTestId("result-header").boundingBox();
+        const appHeader = await page.getByTestId("app-header").boundingBox();
+        const resultHeader = await page.getByTestId("result-header").boundingBox();
 
-            expect(appHeader).not.toBeNull();
-            expect(resultHeader).not.toBeNull();
-            expect(resultHeader!.y).toBeGreaterThanOrEqual(
-                    appHeader!.y + appHeader!.height - 1
-            );
-        }
+        expect(appHeader).not.toBeNull();
+        expect(resultHeader).not.toBeNull();
+        expect(resultHeader!.y).toBeGreaterThanOrEqual(
+            appHeader!.y + appHeader!.height - 1
+        );
+    }
 );
 
 test("primary route resolves one task", async ({ page }, testInfo) => {
@@ -307,11 +307,11 @@ test("creates, selects, reruns and removes one task", async ({ page }, testInfo)
     await addTask(page, "1101");
     await expect(page.getByText(/1 resource ·/)).toBeVisible();
 
-    await page.getByLabel("Task actions").click();
+    await page.getByLabel("Task actions").first().click();
     await page.getByText("Run again").click();
     await expect(page.getByText("Ready").first()).toBeVisible();
 
-    await page.getByLabel("Task actions").click();
+    await page.getByLabel("Task actions").first().click();
     await page.getByText("Remove").click();
     await expect(page.getByText("No task selected")).toBeVisible();
 });
@@ -323,16 +323,16 @@ test("supports multiple tasks, selection and duplicate detection", async ({ page
     await expect(page.getByText("Task 2").first()).toBeVisible();
 
     await page.locator("[data-task-sequence=\"1\"] button").first().click();
-    await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "2001" })).toBeVisible();
 
     await addTask(page, "2001");
     await expect(page.getByText("Task already exists", { exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "2001" })).toBeVisible();
 });
 
 test("batch add creates multiple tasks", async ({ page }, testInfo) => {
     desktopOnly(testInfo);
-    await page.getByRole("button", { name: "Batch add" }).click();
+    await page.getByRole("tab", { name: "Batch add" }).click();
     await page.getByLabel("Links").fill([
         "https://example.test/user/status/3001",
         "https://example.test/user/status/3002",
@@ -510,61 +510,61 @@ test("exhausted rate-limit retries advance to the next route", async ({ page }, 
 });
 
 test(
-        "primary unavailable payload can continue through the configured managed route",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await page.unroute("https://primary.invalid/**");
-            let managedRequests = 0;
-            await page.route("https://primary.invalid/**", route => route.fulfill({
+    "primary unavailable payload can continue through the configured managed route",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await page.unroute("https://primary.invalid/**");
+        let managedRequests = 0;
+        await page.route("https://primary.invalid/**", route => route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            headers: corsHeaders,
+            body: JSON.stringify({ outcome: "fallback" })
+        }));
+        await page.unroute("https://managed.invalid/**");
+        await page.route("https://managed.invalid/**", route => {
+            managedRequests += 1;
+            return route.fulfill({
                 status: 200,
                 contentType: "application/json",
                 headers: corsHeaders,
-                body: JSON.stringify({ outcome: "fallback" })
-            }));
-            await page.unroute("https://managed.invalid/**");
-            await page.route("https://managed.invalid/**", route => {
-                managedRequests += 1;
-                return route.fulfill({
-                    status: 200,
-                    contentType: "application/json",
-                    headers: corsHeaders,
-                    body: "{}"
-                });
+                body: "{}"
             });
+        });
 
-            await addTask(page, "4701");
-            await expect(page.getByText(/1 resource ·/)).toBeVisible();
-            expect(managedRequests).toBe(1);
-        }
+        await addTask(page, "4701");
+        await expect(page.getByText(/1 resource ·/)).toBeVisible();
+        expect(managedRequests).toBe(1);
+    }
 );
 
 test(
-        "restricted source is terminal and never starts anonymous fallbacks",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await page.unroute("https://primary.invalid/**");
-            await page.unroute("https://managed.invalid/**");
-            let managedRequests = 0;
-            await page.route("https://primary.invalid/**", route => route.fulfill({
+    "restricted source is terminal and never starts anonymous fallbacks",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await page.unroute("https://primary.invalid/**");
+        await page.unroute("https://managed.invalid/**");
+        let managedRequests = 0;
+        await page.route("https://primary.invalid/**", route => route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            headers: corsHeaders,
+            body: JSON.stringify({ outcome: "restricted" })
+        }));
+        await page.route("https://managed.invalid/**", route => {
+            managedRequests += 1;
+            return route.fulfill({
                 status: 200,
                 contentType: "application/json",
                 headers: corsHeaders,
-                body: JSON.stringify({ outcome: "restricted" })
-            }));
-            await page.route("https://managed.invalid/**", route => {
-                managedRequests += 1;
-                return route.fulfill({
-                    status: 200,
-                    contentType: "application/json",
-                    headers: corsHeaders,
-                    body: "{}"
-                });
+                body: "{}"
             });
+        });
 
-            await addTask(page, "4801");
-            await expect(page.getByText("Access unavailable")).toBeVisible();
-            expect(managedRequests).toBe(0);
-        }
+        await addTask(page, "4801");
+        await expect(page.getByText("Access unavailable")).toBeVisible();
+        expect(managedRequests).toBe(0);
+    }
 );
 
 test("all unavailable routes produce one final neutral failure", async ({ page }, testInfo) => {
@@ -585,7 +585,7 @@ test("all unavailable routes produce one final neutral failure", async ({ page }
 
     await addTask(page, "4901");
     await expect(page.getByText("This source isn't available through the current access methods."))
-            .toBeVisible();
+        .toBeVisible();
     await expect(page.getByText("Source unavailable")).toHaveCount(1);
 });
 
@@ -628,65 +628,60 @@ test("route health skips a recently blocked route for later tasks", async ({ pag
 });
 
 test(
-        "surfaces engine initialization failure without implementation details",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await page.unroute("**/wasm/engine.js*");
-            await page.route("**/wasm/engine.js*", route => route.abort("failed"));
-            await page.reload({ waitUntil: "domcontentloaded" });
-            await expect(page.getByText("Initialization failed")).toBeVisible({ timeout: 15_000 });
-            await expect(page.getByLabel("Supported link")).toBeDisabled();
-        }
+    "surfaces engine initialization failure without implementation details",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await page.unroute("**/wasm/engine.js*");
+        await page.route("**/wasm/engine.js*", route => route.abort("failed"));
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await expect(page.getByText("Initialization failed")).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByLabel("Supported link").first()).toBeDisabled();
+    }
 );
 
 test(
-        "mobile task drawer creates a task and closes on selection",
-        { tag: "@mobile" },
-        async ({ page }) => {
-            await page.getByLabel("Open tasks").click();
-            await expect(page.getByText("Manage active and completed tasks.")).toBeVisible();
+    "mobile tasks screen creates a task and opens the result view",
+    { tag: "@mobile" },
+    async ({ page }) => {
+        const mobile = page.getByTestId("mobile-tasks-view");
+        const input = mobile.getByLabel("Supported link");
+        await expect(input).toBeEnabled();
+        await input.fill("https://example.test/user/status/6001");
+        await input.press("Enter");
 
-            const drawer = page.getByRole("dialog");
-            const input = drawer.getByLabel("Supported link");
-            await expect(input).toBeEnabled();
-            await input.fill("https://example.test/user/status/6001");
-            await input.press("Enter");
-            await expect(input).toHaveValue("");
-            await expect(page.getByText("Manage active and completed tasks.")).not.toBeVisible();
-            await expect(page.getByRole("heading", { name: "Task 1" })).toBeVisible();
+        await expect(page.getByTestId("resource-detail")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "6001" })).toBeVisible();
+        await expect(mobile).toBeHidden();
 
-            await page.getByLabel("Open tasks").click();
-            await page.getByRole("dialog")
-                    .locator("[data-task-sequence=\"1\"] button")
-                    .first()
-                    .click();
-            await expect(page.getByText("Manage active and completed tasks.")).not.toBeVisible();
-        }
+        await page.getByLabel("Back to tasks").click();
+        await expect(mobile).toBeVisible();
+        await expect(mobile.locator("[data-task-sequence=\"1\"]")).toContainText("6001");
+    }
 );
 
 test(
-        "single resource uses the detail workspace instead of a card grid",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await addTask(page, "7001");
-            const detail = page.getByTestId("resource-detail");
-            await expect(detail).toBeVisible();
-            await expect(page.getByTestId("resource-grid")).toHaveCount(0);
-            await expect(page.getByText("Video", { exact: true })).toBeVisible();
+    "single resource uses the detail workspace instead of a card grid",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await addTask(page, "7001");
+        const detail = page.getByTestId("resource-detail");
+        await expect(detail).toBeVisible();
+        await expect(page.getByTestId("resource-grid")).toHaveCount(0);
+        await expect(page.getByText("Video", { exact: true })).toBeVisible();
 
-            const detailBox = await detail.boundingBox();
-            const viewerBox = await page.getByTestId("resource-viewer").first().boundingBox();
-            expect(detailBox).not.toBeNull();
-            expect(viewerBox).not.toBeNull();
-            expect(detailBox!.width).toBeGreaterThan(700);
-            expect(viewerBox!.width).toBeGreaterThan(420);
+        const detailBox = await detail.boundingBox();
+        const viewerBox = await page.getByTestId("resource-viewer").first().boundingBox();
+        expect(detailBox).not.toBeNull();
+        expect(viewerBox).not.toBeNull();
+        expect(detailBox!.width).toBeGreaterThan(700);
+        expect(viewerBox!.width).toBeGreaterThan(420);
 
-            const viewport = page.viewportSize();
-            expect(viewport).not.toBeNull();
-            expect(viewerBox!.height).toBeLessThanOrEqual(
-                    Math.min(viewport!.height * 0.62, 42 * 16) + 2
-            );
-        }
+        const viewport = page.viewportSize();
+        expect(viewport).not.toBeNull();
+        expect(viewerBox!.height).toBeLessThanOrEqual(
+            Math.min(viewport!.height * 0.62, 42 * 16) + 2
+        );
+    }
 );
 
 test("multiple resources use the resource grid", async ({ page }, testInfo) => {
@@ -715,60 +710,60 @@ test("multiple resources download with post id and sequence", async ({ page }, t
 });
 
 test(
-        "multiple resources can scroll all the way to the final card",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await addTask(page, "7003");
+    "multiple resources can scroll all the way to the final card",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await addTask(page, "7003");
 
-            const scrollArea = page.getByTestId("result-scroll-area");
-            const cards = page.getByTestId("resource-card");
-            await expect(cards).toHaveCount(12);
+        const scrollArea = page.getByTestId("result-scroll-area");
+        const cards = page.getByTestId("resource-card");
+        await expect(cards).toHaveCount(12);
 
-            const before = await scrollArea.evaluate(element => (
-                    {
-                        clientHeight: element.clientHeight,
-                        scrollHeight: element.scrollHeight
-                    }
-            ));
-            expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
+        const before = await scrollArea.evaluate(element => (
+            {
+                clientHeight: element.clientHeight,
+                scrollHeight: element.scrollHeight
+            }
+        ));
+        expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
 
-            await scrollArea.evaluate(element => {
-                element.scrollTop = element.scrollHeight;
-            });
+        await scrollArea.evaluate(element => {
+            element.scrollTop = element.scrollHeight;
+        });
 
-            await expect.poll(async () => scrollArea.evaluate(element =>
-                    element.scrollTop + element.clientHeight >= element.scrollHeight - 2
-            )).toBe(true);
+        await expect.poll(async () => scrollArea.evaluate(element =>
+            element.scrollTop + element.clientHeight >= element.scrollHeight - 2
+        )).toBe(true);
 
-            const areaBox = await scrollArea.boundingBox();
-            const lastCardBox = await cards.last().boundingBox();
-            expect(areaBox).not.toBeNull();
-            expect(lastCardBox).not.toBeNull();
-            expect(lastCardBox!.y + lastCardBox!.height)
-                    .toBeLessThanOrEqual(areaBox!.y + areaBox!.height + 2);
-        }
+        const areaBox = await scrollArea.boundingBox();
+        const lastCardBox = await cards.last().boundingBox();
+        expect(areaBox).not.toBeNull();
+        expect(lastCardBox).not.toBeNull();
+        expect(lastCardBox!.y + lastCardBox!.height)
+            .toBeLessThanOrEqual(areaBox!.y + areaBox!.height + 2);
+    }
 );
 
 test(
-        "portrait media keeps its real aspect ratio and is not forced to 16:10",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await addTask(page, "7001");
-            const viewer = page.getByTestId("resource-viewer").first();
-            await expect(viewer).toHaveAttribute("data-aspect-ratio", "720 / 1280");
-            await expect(viewer).not.toHaveCSS("aspect-ratio", "8 / 5");
-        }
+    "portrait media keeps its real aspect ratio and is not forced to 16:10",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await addTask(page, "7001");
+        const viewer = page.getByTestId("resource-viewer").first();
+        await expect(viewer).toHaveAttribute("data-aspect-ratio", "720 / 1280");
+        await expect(viewer).not.toHaveCSS("aspect-ratio", "8 / 5");
+    }
 );
 
 test(
-        "download is the primary resource action and resource copy actions are absent",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await addTask(page, "7001");
-            await expect(page.getByRole("button", { name: "Download", exact: true })).toBeVisible();
-            await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
-            await expect(page.getByText("Copy address", { exact: true })).toHaveCount(0);
-        }
+    "download is the primary resource action and resource copy actions are absent",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await addTask(page, "7001");
+        await expect(page.getByRole("button", { name: "Download", exact: true })).toBeVisible();
+        await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
+        await expect(page.getByText("Copy address", { exact: true })).toHaveCount(0);
+    }
 );
 
 test("direct resource download creates a browser download", async ({ page }, testInfo) => {
@@ -783,55 +778,55 @@ test("direct resource download creates a browser download", async ({ page }, tes
 });
 
 test(
-        "direct download failure falls back to the configured managed download route",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await addTask(page, "7102");
+    "direct download failure falls back to the configured managed download route",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await addTask(page, "7102");
 
-            await page.unroute("https://assets.invalid/**");
-            await page.route("https://assets.invalid/**", route => route.abort("connectionfailed"));
-            let gatewayDownloads = 0;
-            await page.route("https://managed.invalid/v1/download/**", route => {
-                gatewayDownloads += 1;
-                return route.fulfill({
-                    status: 200,
-                    contentType: "image/jpeg",
-                    headers: {
-                        "access-control-allow-origin": "*",
-                        "access-control-expose-headers": "content-disposition, content-length",
-                        "content-disposition": "attachment; filename=\"gateway-file.jpg\"",
-                        "content-length": "13"
-                    },
-                    body: "gateway-image"
-                });
+        await page.unroute("https://assets.invalid/**");
+        await page.route("https://assets.invalid/**", route => route.abort("connectionfailed"));
+        let gatewayDownloads = 0;
+        await page.route("https://managed.invalid/v1/download/**", route => {
+            gatewayDownloads += 1;
+            return route.fulfill({
+                status: 200,
+                contentType: "image/jpeg",
+                headers: {
+                    "access-control-allow-origin": "*",
+                    "access-control-expose-headers": "content-disposition, content-length",
+                    "content-disposition": "attachment; filename=\"gateway-file.jpg\"",
+                    "content-length": "13"
+                },
+                body: "gateway-image"
             });
+        });
 
-            const event = page.waitForEvent("download");
-            await page.getByRole("button", { name: "Download", exact: true }).click();
-            const download = await event;
-            expect(download.suggestedFilename()).toBe("7102.jpg");
-            expect(gatewayDownloads).toBe(1);
-        }
+        const event = page.waitForEvent("download");
+        await page.getByRole("button", { name: "Download", exact: true }).click();
+        const download = await event;
+        expect(download.suggestedFilename()).toBe("7102.jpg");
+        expect(gatewayDownloads).toBe(1);
+    }
 );
 
 test(
-        "download failure exposes the open-resource fallback without restoring copy",
-        async ({ page }, testInfo) => {
-            desktopOnly(testInfo);
-            await addTask(page, "7103");
+    "download failure exposes the open-resource fallback without restoring copy",
+    async ({ page }, testInfo) => {
+        desktopOnly(testInfo);
+        await addTask(page, "7103");
 
-            await page.unroute("https://assets.invalid/**");
-            await page.route("https://assets.invalid/**", route => route.abort("connectionfailed"));
-            await page.route(
-                    "https://managed.invalid/v1/download/**",
-                    route => route.abort("connectionfailed")
-            );
+        await page.unroute("https://assets.invalid/**");
+        await page.route("https://assets.invalid/**", route => route.abort("connectionfailed"));
+        await page.route(
+            "https://managed.invalid/v1/download/**",
+            route => route.abort("connectionfailed")
+        );
 
-            await page.getByRole("button", { name: "Download", exact: true }).click();
-            await expect(page.getByText("Download unavailable").first()).toBeVisible();
-            await expect(page.getByRole("button", { name: "Open resource" })).toBeVisible();
-            await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
-        }
+        await page.getByRole("button", { name: "Download", exact: true }).click();
+        await expect(page.getByText("Download unavailable").first()).toBeVisible();
+        await expect(page.getByRole("button", { name: "Open resource" })).toBeVisible();
+        await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
+    }
 );
 
 test("variant download uses the selected representation", async ({ page }, testInfo) => {
@@ -856,8 +851,8 @@ test("download shows an in-progress state", async ({ page }, testInfo) => {
         return route.fulfill({
             status: 200,
             contentType: route.request().url().endsWith(".mp4")
-                    ? "video/mp4"
-                    : "image/jpeg",
+                ? "video/mp4"
+                : "image/jpeg",
             headers: { "access-control-allow-origin": "*", "content-length": "16" },
             body: "mock-video-bytes"
         });
@@ -876,24 +871,24 @@ test("color mode control switches the semantic theme", async ({ page }, testInfo
     const before = await page.evaluate(() => document.documentElement.className);
     await button.click();
     await expect.poll(() => page.evaluate(() => document.documentElement.className))
-            .not
-            .toBe(before);
+        .not
+        .toBe(before);
 });
 
 test(
-        "mobile detail keeps download as the primary action",
-        { tag: "@mobile" },
-        async ({ page }) => {
-            await page.getByLabel("Open tasks").click();
-            const drawer = page.getByRole("dialog");
-            const input = drawer.getByLabel("Supported link");
-            await expect(input).toBeEnabled();
-            await input.fill("https://example.test/user/status/7001");
-            await input.press("Enter");
-            await expect(input).toHaveValue("");
+    "mobile detail keeps download as the primary action",
+    { tag: "@mobile" },
+    async ({ page }) => {
+        const mobile = page.getByTestId("mobile-tasks-view");
+        const input = mobile.getByLabel("Supported link");
+        await expect(input).toBeEnabled();
+        await input.fill("https://example.test/user/status/7001");
+        await input.press("Enter");
 
-            await expect(page.getByTestId("resource-detail")).toBeVisible();
-            await expect(page.getByRole("button", { name: "Download", exact: true })).toBeVisible();
-            await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
-        }
+        await expect(page.getByTestId("resource-detail")).toBeVisible();
+        const actionBar = page.getByTestId("resource-detail-actionbar");
+        await expect(actionBar.getByRole("button", { name: "Download", exact: true }))
+            .toBeVisible();
+        await expect(page.getByText("Copy", { exact: true })).toHaveCount(0);
+    }
 );

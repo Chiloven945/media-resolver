@@ -1,14 +1,67 @@
 <script lang="ts" setup>
+import type { BatchGroup } from "~/composables/useBatchDownload";
+import { batchEntriesForTask } from "~/composables/useBatchDownload";
+import BatchDownloadDialog from "~/components/task/BatchDownloadDialog.vue";
+
 const props = withDefaults(defineProps<{ showTitle?: boolean }>(), {
   showTitle: true
 });
 const emit = defineEmits<{ selected: []; taskAdded: [] }>();
 const clearAllOpen = ref(false);
+const batchOpen = ref(false);
+const batchArchiveName = ref("");
+const query = ref("");
+const filter = ref<"all" | "active" | "ready" | "failed">("all");
 const queue = useTaskQueue();
+
+const filters = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "ready", label: "Ready" },
+  { value: "failed", label: "Failed" }
+] as const;
+
+const filteredTasks = computed(() => {
+  const search = query.value.trim().toLowerCase();
+  return [...queue.tasks.value].reverse().filter(task => {
+    if (filter.value === "active"
+        && !["queued", "connecting", "processing"].includes(task.state)) {
+      return false;
+    }
+    if (filter.value === "ready" && task.state !== "ready") {
+      return false;
+    }
+    if (filter.value === "failed" && !["failed", "cancelled"].includes(task.state)) {
+      return false;
+    }
+    if (!search) {
+      return true;
+    }
+    return [task.sourceKey, task.input, task.normalizedInput]
+        .filter(Boolean)
+        .some(value => value!.toLowerCase().includes(search));
+  });
+});
 
 const progressValue = computed(() => queue.totalCount.value
     ? queue.completedCount.value
     : 0);
+const readyTasks = computed(() => queue.tasks.value.filter(task =>
+    task.state === "ready" && (task.result?.resources.length || 0) > 0
+));
+const batchGroups = computed<BatchGroup[]>(() => readyTasks.value.map(task => ({
+  id: task.id,
+  title: task.sourceKey || `Task ${task.sequence}`,
+  subtitle: `${task.result!.resources.length} resources · Task ${task.sequence}`,
+  entries: batchEntriesForTask(task)
+})));
+
+const openBatch = () => {
+  batchArchiveName.value = `media-resolver-${new Date().toISOString()
+      .replace(/[:T]/g, "-")
+      .slice(0, 16)}.zip`;
+  batchOpen.value = true;
+};
 </script>
 
 <template>
@@ -32,9 +85,52 @@ const progressValue = computed(() => queue.totalCount.value
             :model-value="progressValue"
             size="xs"
         />
+        <UButton
+            :disabled="readyTasks.length === 0"
+            :label="`Batch download (${readyTasks.length})`"
+            block
+            color="neutral"
+            icon="i-lucide-download"
+            size="sm"
+            variant="soft"
+            @click="openBatch"
+        />
       </div>
 
-      <TaskList class="min-h-0 flex-1" @selected="emit('selected')"/>
+      <div v-if="queue.totalCount.value" class="space-y-2">
+        <UInput
+            v-model="query"
+            aria-label="Search tasks"
+            class="w-full"
+            icon="i-lucide-search"
+            placeholder="Search by post ID"
+            size="sm"
+        />
+        <div class="flex gap-1 overflow-x-auto">
+          <button
+              v-for="item in filters"
+              :key="item.value"
+              :class="filter === item.value
+                ? 'border-default bg-default text-highlighted shadow-sm'
+                : 'border-transparent text-muted hover:text-highlighted'"
+              class="shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors"
+              type="button"
+              @click="filter = item.value"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </div>
+
+      <TaskList
+          :tasks="filteredTasks"
+          :empty-description="queue.tasks.value.length
+            ? 'Try a different filter or search term.'
+            : 'Add a supported link above to start.'"
+          :empty-title="queue.tasks.value.length ? 'No matching tasks' : 'No tasks yet'"
+          class="min-h-0 flex-1"
+          @selected="emit('selected')"
+      />
 
       <div v-if="queue.tasks.value.length" class="flex items-center border-t border-default pt-2">
         <UButton
@@ -58,6 +154,13 @@ const progressValue = computed(() => queue.totalCount.value
       </div>
     </div>
   </div>
+
+  <BatchDownloadDialog
+      v-model:open="batchOpen"
+      :archive-name="batchArchiveName"
+      :groups="batchGroups"
+      description="Select completed tasks and choose how to save their resources."
+  />
 
   <UModal
       v-model:open="clearAllOpen"

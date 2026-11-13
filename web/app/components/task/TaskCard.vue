@@ -24,6 +24,10 @@ const summary = computed(() => {
   }
   return "Task in progress";
 });
+const thumbnails = computed(() => (props.task.result?.resources || [])
+    .slice(0, 3)
+    .map(resource => resource.previewUrl || resource.preferredUrl)
+    .filter(Boolean));
 
 const selectTask = () => {
   select(props.task.id);
@@ -76,30 +80,55 @@ const menuItems = computed(() => {
 
 <template>
   <div
-      :class="isSelected ? 'border-primary bg-elevated' : 'border-transparent hover:bg-elevated/70'"
+      :class="isSelected
+        ? 'border-primary bg-elevated shadow-sm'
+        : 'border-default bg-default hover:border-primary/30 hover:bg-elevated/60'"
       :data-task-sequence="task.sequence"
-      class="flex items-stretch border-l-2 transition-colors"
+      class="group flex items-stretch gap-1 rounded-xl border transition-colors"
+      data-testid="task-card"
   >
     <UButton
-        class="min-w-0 flex-1 justify-start px-3 py-2.5"
+        class="min-w-0 flex-1 justify-start gap-3 rounded-xl px-2.5 py-2.5"
         color="neutral"
         variant="ghost"
         @click="selectTask"
     >
+      <div class="flex shrink-0 -space-x-2">
+        <template v-if="thumbnails.length">
+          <img
+              v-for="(thumbnail, index) in thumbnails"
+              :key="`${task.id}-${index}`"
+              :src="thumbnail"
+              alt=""
+              class="size-10 rounded-lg border-2 border-default object-cover shadow-sm"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+          >
+        </template>
+        <div
+            v-else
+            class="flex size-10 items-center justify-center rounded-lg border border-dashed border-default bg-elevated text-muted"
+        >
+          <UIcon :name="task.state === 'failed' ? 'i-lucide-triangle-alert' : 'i-lucide-image'"
+                 class="size-4"/>
+        </div>
+      </div>
+
       <div class="min-w-0 flex-1 text-left">
         <div class="flex items-center justify-between gap-2">
-          <span class="truncate text-sm font-medium text-highlighted">Task {{
-              task.sequence
-            }}</span>
-          <TaskStatus :state="task.state"/>
+          <span class="truncate text-sm font-semibold text-highlighted">
+            {{ task.sourceKey || `Task ${task.sequence}` }}
+          </span>
+          <TaskStatus :state="task.state" class="shrink-0"/>
         </div>
-        <div class="mt-1 truncate text-xs text-muted">{{ summary }}</div>
+        <div class="mt-1 truncate text-xs text-muted">Task {{ task.sequence }} · {{ summary }}</div>
       </div>
     </UButton>
 
     <UDropdownMenu :items="menuItems">
       <UButton
           aria-label="Task actions"
+          class="my-2 mr-1 rounded-lg"
           color="neutral"
           icon="i-lucide-ellipsis-vertical"
           size="sm"

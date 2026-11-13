@@ -4,6 +4,7 @@ import { requireHttps } from "~/composables/useResourceActions";
 import { resourceFilename } from "~/utils/resource-filename";
 import { buildManagedDownloadUrl } from "~/utils/download";
 import { resolverEndpoint } from "~/utils/resolver-endpoint";
+import { saveBlob } from "~/utils/save-blob";
 
 interface DownloadOptions {
     resourceIndex: number;
@@ -39,13 +40,43 @@ export function useDownloadManager() {
         delete downloads.value[key];
     };
 
+    const fetchResourceBlob = async (
+        sourceKey: string,
+        resource: ResourceItem,
+        variant: ResourceVariant | undefined,
+        variantIndex: number | undefined,
+        signal: AbortSignal,
+        onProgress?: (progress?: number) => void
+    ): Promise<Blob> => {
+        const url = requireHttps(variant?.url || resource.preferredUrl).toString();
+
+        try {
+            return await fetchBlob(url, signal, onProgress);
+        } catch (error) {
+            if (isAbort(error)) {
+                throw error;
+            }
+        }
+
+        const gateway = buildManagedDownloadUrl(
+            resolverEndpoint(config.public.resolverEndpoint) || "",
+            sourceKey,
+            resource.id,
+            variantIndex
+        );
+        if (gateway) {
+            return await fetchBlob(gateway, signal, onProgress);
+        }
+
+        throw new Error("download unavailable");
+    };
+
     const download = async (
         sourceKey: string,
         resource: ResourceItem,
         options: DownloadOptions
     ): Promise<DownloadResult> => {
         const selected = options.variant;
-        const url = requireHttps(selected?.url || resource.preferredUrl).toString();
         const key = keyFor(sourceKey, resource.id, options.variantIndex);
         if (["preparing", "downloading"].includes(stateFor(key).state)) {
             return "cancelled";
@@ -63,11 +94,19 @@ export function useDownloadManager() {
             options.resourceCount,
             selected
         );
+
         try {
-            const direct = await fetchBlob(url, controller.signal, progress => {
-                setState(key, { state: "downloading", progress });
-            });
-            saveBlob(direct, fallbackName);
+            const blob = await fetchResourceBlob(
+                sourceKey,
+                resource,
+                selected,
+                options.variantIndex,
+                controller.signal,
+                progress => {
+                    setState(key, { state: "downloading", progress });
+                }
+            );
+            saveBlob(blob, fallbackName);
             setState(key, { state: "completed", progress: 100 });
             return "downloaded";
         } catch (error) {
@@ -75,46 +114,27 @@ export function useDownloadManager() {
                 delete downloads.value[key];
                 return "cancelled";
             }
+            setState(key, {
+                state: "failed",
+                fallbackUrl: requireHttps(selected?.url || resource.preferredUrl).toString()
+            });
+            return "failed";
+        } finally {
+            controllers.delete(key);
         }
-
-        const gateway = buildManagedDownloadUrl(
-            resolverEndpoint(config.public.resolverEndpoint) || "",
-            sourceKey,
-            resource.id,
-            options.variantIndex
-        );
-        if (gateway) {
-            try {
-                setState(key, { state: "preparing" });
-                const proxied = await fetchBlob(gateway, controller.signal, progress => {
-                    setState(key, { state: "downloading", progress });
-                });
-                saveBlob(proxied, fallbackName);
-                setState(key, { state: "completed", progress: 100 });
-                return "downloaded";
-            } catch (error) {
-                if (isAbort(error)) {
-                    delete downloads.value[key];
-                    return "cancelled";
-                }
-            }
-        }
-
-        setState(key, { state: "failed", fallbackUrl: url });
-        return "failed";
     };
 
     function setState(key: string, value: ResourceDownload) {
         downloads.value[key] = value;
     }
 
-    return { keyFor, stateFor, progressFor, download, cancel };
+    return { keyFor, stateFor, progressFor, download, fetchResourceBlob, cancel };
 }
 
 async function fetchBlob(
     url: string,
     signal: AbortSignal,
-    onProgress: (progress?: number) => void
+    onProgress?: (progress?: number) => void
 ): Promise<Blob> {
     const response = await fetch(url, {
         method: "GET",
@@ -135,14 +155,14 @@ async function fetchBlob(
 
     if (!response.body) {
         const blob = await response.blob();
-        onProgress(100);
+        onProgress?.(100);
         return blob;
     }
 
     const reader = response.body.getReader();
     const chunks: BlobPart[] = [];
     let received = 0;
-    onProgress(total
+    onProgress?.(total
         ? 0
         : undefined);
 
@@ -154,7 +174,7 @@ async function fetchBlob(
         if (value) {
             chunks.push(value);
             received += value.byteLength;
-            onProgress(total
+            onProgress?.(total
                 ? Math.min(
                     100,
                     Math.round((
@@ -166,27 +186,6 @@ async function fetchBlob(
     }
 
     return new Blob(chunks, { type: contentType });
-}
-
-function saveBlob(blob: Blob, filename: string) {
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = sanitizeFilename(filename) || "resource";
-    anchor.rel = "noopener noreferrer";
-    anchor.style.display = "none";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-}
-
-function sanitizeFilename(value: string): string {
-    return value
-        .replace(/[\\/:*?"<>|\u0000-\u001F]/g, "-")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 180);
 }
 
 function isAbort(error: unknown): boolean {

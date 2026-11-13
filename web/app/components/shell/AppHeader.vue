@@ -1,11 +1,14 @@
 <script lang="ts" setup>
 import type { DropdownMenuItem } from "@nuxt/ui";
+import DownloadQueueSheet from "~/components/shell/DownloadQueueSheet.vue";
 
-const emit = defineEmits<{ openTasks: [] }>();
 const preferencesOpen = ref(false);
 const aboutOpen = ref(false);
+const downloadsOpen = ref(false);
+const { pane, openTasks } = useMobileNavigation();
 const { settings } = useAppSettings();
 const { state: engineState } = useEngine();
+const { state: batchState, active: batchActive } = useBatchDownload();
 const config = useRuntimeConfig();
 const displayBuildHash = computed(() => {
   const hash = config.public.buildHash;
@@ -44,12 +47,13 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
   >
     <template #left>
       <UButton
-          aria-label="Open tasks"
+          v-if="pane === 'result'"
+          aria-label="Back to tasks"
           class="lg:hidden"
           color="neutral"
-          icon="i-lucide-list-todo"
+          icon="i-lucide-arrow-left"
           variant="ghost"
-          @click="emit('openTasks')"
+          @click="openTasks"
       />
       <div class="flex items-center gap-2.5">
         <UIcon class="size-6 text-primary" name="i-lucide-orbit"/>
@@ -58,16 +62,21 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
     </template>
 
     <template #right>
-      <UButton
-          aria-label="New task"
-          class="lg:hidden"
-          color="primary"
-          icon="i-lucide-plus"
-          variant="soft"
-          @click="emit('openTasks')"
-      />
       <UBadge class="hidden sm:inline-flex" color="neutral" size="sm" variant="subtle">v0.1.0
       </UBadge>
+      <div v-if="batchState.state !== 'idle'" class="relative">
+        <UButton
+            aria-label="Downloads"
+            color="neutral"
+            icon="i-lucide-download"
+            variant="ghost"
+            @click="downloadsOpen = true"
+        />
+        <span
+            v-if="batchActive"
+            class="pointer-events-none absolute right-1 top-1 size-2 animate-pulse rounded-full bg-primary"
+        />
+      </div>
       <UColorModeButton aria-label="Toggle color mode" color="neutral" variant="ghost"/>
       <UDropdownMenu :items="menuItems">
         <UButton
@@ -79,6 +88,8 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
       </UDropdownMenu>
     </template>
   </UHeader>
+
+  <DownloadQueueSheet v-model:open="downloadsOpen"/>
 
   <UModal
       v-model:open="preferencesOpen"

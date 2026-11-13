@@ -28,31 +28,18 @@ body {
     overflow: hidden;
 }
 
-/*
- * UDashboardGroup is fixed/inset-0 by default because Nuxt UI assumes it is
- * the viewport root. In this app it lives below UHeader, so it must
- * participate in AppShell's flex flow instead.
- */
-.workspace-grid {
-    position: relative;
-    inset: auto;
-    width: 100%;
-    min-height: 0;
-    flex: 1 1 0%;
-}
-
 .resource-viewer-stage {
     width: 100%;
     min-height: min(
-            18rem,
-            calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 1rem)
+            12rem,
+            calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 6rem)
     );
     height: min(
-            56dvh,
-            32rem,
-            calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 1rem)
+            38dvh,
+            22rem,
+            calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 6rem)
     );
-    max-height: 32rem;
+    max-height: 22rem;
 }
 
 .resource-viewer-media {
@@ -61,34 +48,18 @@ body {
     object-fit: contain;
 }
 
-@media (max-width: 1023px) {
-    .desktop-task-panel {
-        display: none !important;
-    }
-}
-
 @media (min-width: 1024px) {
-    .desktop-task-panel {
-        min-width: 17.5rem;
-        max-width: 23.75rem;
-    }
-
-    /*
-     * A single resource should be prominent without consuming the whole
-     * viewport. The inspector remains alongside it while the result body can
-     * scroll if either side needs more vertical space.
-     */
     .resource-viewer-stage {
         min-height: min(
                 24rem,
                 calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 2rem)
         );
         height: min(
-                62dvh,
-                42rem,
+                56dvh,
+                38rem,
                 calc(100dvh - var(--ui-header-height) - var(--result-header-height) - 2rem)
         );
-        max-height: 42rem;
+        max-height: 38rem;
     }
 }
 

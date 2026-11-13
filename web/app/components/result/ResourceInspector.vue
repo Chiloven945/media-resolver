@@ -100,7 +100,7 @@ const startDownload = async () => {
         <div v-if="primarySummary" class="mt-2 text-sm text-muted">{{ primarySummary }}</div>
       </div>
 
-      <div class="space-y-2">
+      <div class="hidden space-y-2 lg:block">
         <div class="flex gap-2">
           <UButton
               :disabled="busy"
@@ -139,7 +139,7 @@ const startDownload = async () => {
 
       <div
           v-if="downloadState.state === 'failed'"
-          class="border border-error/20 bg-error/5 p-3"
+          class="hidden border border-error/20 bg-error/5 p-3 lg:block"
       >
         <div class="text-sm font-medium text-highlighted">Download unavailable</div>
         <p class="mt-1 text-xs leading-5 text-muted">Direct and managed download methods could not
