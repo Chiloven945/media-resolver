@@ -39,37 +39,41 @@ const video: ResourceItem = {
 };
 
 describe("resource filenames", () => {
-    it("uses a stable image filename", () => {
-        expect(resourceFilename(image, 0, image.variants[0])).toBe("resource-1.jpg");
+    it("uses the post id for a single image", () => {
+        expect(resourceFilename("7101", image, 0, 1, image.variants[0])).toBe("7101.jpg");
     });
 
-    it("includes selected video dimensions", () => {
-        expect(resourceFilename(video, 1, video.variants[0])).toBe("resource-2-720x1280.mp4");
+    it("uses the post id for a single video", () => {
+        expect(resourceFilename("7001", video, 0, 1, video.variants[0])).toBe("7001.mp4");
     });
 
-    it("marks animated video representations without pretending they are gif files", () => {
+    it("appends a one-based sequence when the post has multiple media", () => {
+        expect(resourceFilename("7002", image, 1, 2, image.variants[0])).toBe("7002-2.jpg");
+    });
+
+    it("keeps the resolved extension without kind or dimension suffixes", () => {
         const animation: ResourceItem = { ...video, kind: "animation" };
-        expect(resourceFilename(animation, 2, animation.variants[0]))
-                .toBe("resource-3-animation.mp4");
+        expect(resourceFilename("7003", animation, 2, 3, animation.variants[0]))
+            .toBe("7003-3.mp4");
     });
 });
 
 describe("managed download URL", () => {
     it("uses only the configured endpoint, source key, resource id and variant index", () => {
         expect(buildManagedDownloadUrl("https://resolver.example/base", "123", "item:1", 2))
-                .toBe("https://resolver.example/base/v1/download/123/item%3A1?variant=2");
+            .toBe("https://resolver.example/base/v1/download/123/item%3A1?variant=2");
     });
 
     it("rejects insecure remote and pre-parameterized endpoints", () => {
         expect(buildManagedDownloadUrl("http://resolver.example", "123", "item", 0))
-                .toBeUndefined();
+            .toBeUndefined();
         expect(buildManagedDownloadUrl("https://resolver.example?target=x", "123", "item", 0))
-                .toBeUndefined();
+            .toBeUndefined();
     });
 
     it("allows loopback HTTP for local Worker development", () => {
         expect(buildManagedDownloadUrl("http://127.0.0.1:8787", "123", "item", 0))
-                .toBe("http://127.0.0.1:8787/v1/download/123/item?variant=0");
+            .toBe("http://127.0.0.1:8787/v1/download/123/item?variant=0");
     });
 });
 
@@ -80,13 +84,13 @@ describe("resolver endpoint normalization", () => {
 
     it("keeps safe HTTPS endpoints and strips a trailing slash", () => {
         expect(normalizeResolverEndpoint("https://resolver.example/base/"))
-                .toBe("https://resolver.example/base");
+            .toBe("https://resolver.example/base");
     });
 
     it("allows only loopback hosts over HTTP", () => {
         expect(normalizeResolverEndpoint("http://localhost:8787"))
-                .toBe("http://localhost:8787");
+            .toBe("http://localhost:8787");
         expect(normalizeResolverEndpoint("http://resolver.example"))
-                .toBeUndefined();
+            .toBeUndefined();
     });
 });

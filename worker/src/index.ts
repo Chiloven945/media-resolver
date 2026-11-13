@@ -23,18 +23,18 @@ interface PreparedRequest {
 type ResolutionSession = unknown;
 
 type ResolutionStep =
-        | {
+    | {
     kind: "request";
     session: ResolutionSession;
     request: PreparedRequest;
     sourceKey: string;
     normalizedInput: string;
 }
-        | {
+    | {
     kind: "resolved";
     result: ResourceBundle;
 }
-        | {
+    | {
     kind: "failed";
     error: ResolveFailure;
 };
@@ -73,8 +73,8 @@ interface ResourceBundle {
 }
 
 type TransportResult =
-        | { kind: "response"; status: number; body: Uint8Array }
-        | { kind: "network" | "timeout" };
+    | { kind: "response"; status: number; body: Uint8Array }
+    | { kind: "network" | "timeout" };
 
 const RESOLVE_TIMEOUT_MS = 15_000;
 const DOWNLOAD_CONNECT_TIMEOUT_MS = 20_000;
@@ -145,9 +145,9 @@ async function handleResolve(sourceKey: string): Promise<Response> {
 }
 
 async function handleDownload(
-        sourceKey: string,
-        resourceId: string,
-        variantIndex: number | undefined
+    sourceKey: string,
+    resourceId: string,
+    variantIndex: number | undefined
 ): Promise<Response> {
     const resolved = await resolveSource(sourceKey);
     if ("error" in resolved) {
@@ -161,8 +161,8 @@ async function handleDownload(
 
     const resource = resolved.result.resources[resourceIndex];
     const variant = variantIndex === undefined
-            ? undefined
-            : resource.variants[variantIndex];
+        ? undefined
+        : resource.variants[variantIndex];
     if (variantIndex !== undefined && !variant) {
         return apiError(404, "variant_not_found", "Variant not found.");
     }
@@ -183,9 +183,9 @@ async function handleDownload(
         });
     } catch {
         return apiError(
-                502,
-                "network_unavailable",
-                "Resource download is temporarily unavailable."
+            502,
+            "network_unavailable",
+            "Resource download is temporarily unavailable."
         );
     } finally {
         clearTimeout(timer);
@@ -193,20 +193,27 @@ async function handleDownload(
 
     if (!upstream.ok || !upstream.body) {
         return apiError(
-                upstream.status === 404
-                        ? 404
-                        : 502,
-                upstream.status === 404
-                        ? "resource_not_found"
-                        : "remote_unavailable",
-                "Resource download is temporarily unavailable."
+            upstream.status === 404
+                ? 404
+                : 502,
+            upstream.status === 404
+                ? "resource_not_found"
+                : "remote_unavailable",
+            "Resource download is temporarily unavailable."
         );
     }
 
     const contentType = upstream.headers.get("content-type")
-            || variant?.mimeType
-            || "application/octet-stream";
-    const filename = downloadFilename(resource, resourceIndex, variant, contentType, target);
+        || variant?.mimeType
+        || "application/octet-stream";
+    const filename = downloadFilename(
+        sourceKey,
+        resourceIndex,
+        resolved.result.resources.length,
+        variant,
+        contentType,
+        target
+    );
     const headers = new Headers({
         "Cache-Control": "no-store",
         "Content-Disposition": `attachment; filename="${filename}"`,
@@ -221,7 +228,7 @@ async function handleDownload(
 }
 
 async function resolveSource(
-        sourceKey: string
+    sourceKey: string
 ): Promise<{ result: ResourceBundle } | { error: ResolveFailure }> {
     let step: ResolutionStep;
     try {
@@ -241,8 +248,8 @@ async function resolveSource(
         const transport = await executePreparedRequest(step.request);
         try {
             step = transport.kind === "response"
-                    ? respond(step.session, transport.status, transport.body) as ResolutionStep
-                    : transport_failed(step.session, transport.kind) as ResolutionStep;
+                ? respond(step.session, transport.status, transport.body) as ResolutionStep
+                : transport_failed(step.session, transport.kind) as ResolutionStep;
         } catch (error) {
             return { error: normalizeEngineError(error) };
         }
@@ -304,9 +311,9 @@ async function executePreparedRequest(request: PreparedRequest): Promise<Transpo
 }
 
 async function retryDelay(
-        policy: RetryPolicy,
-        attempt: number,
-        retryAfter?: string | null
+    policy: RetryPolicy,
+    attempt: number,
+    retryAfter?: string | null
 ) {
     const retryAfterMs = parseRetryAfter(retryAfter);
     const configured = policy.delaysMs?.[attempt] ?? 0;
@@ -326,8 +333,8 @@ function parseRetryAfter(value?: string | null): number {
     }
     const at = Date.parse(value);
     return Number.isFinite(at)
-            ? Math.max(0, at - Date.now())
-            : 0;
+        ? Math.max(0, at - Date.now())
+        : 0;
 }
 
 function parseVariantIndex(value: string | null): number | undefined | null {
@@ -339,8 +346,8 @@ function parseVariantIndex(value: string | null): number | undefined | null {
     }
     const index = Number(value);
     return Number.isSafeInteger(index) && index >= 0 && index <= 10_000
-            ? index
-            : null;
+        ? index
+        : null;
 }
 
 function isSafeResourceUrl(value: string): boolean {
@@ -353,30 +360,26 @@ function isSafeResourceUrl(value: string): boolean {
 }
 
 function downloadFilename(
-        resource: ResourceItem,
-        resourceIndex: number,
-        variant: ResourceVariant | undefined,
-        contentType: string,
-        target: string
+    sourceKey: string,
+    resourceIndex: number,
+    resourceCount: number,
+    variant: ResourceVariant | undefined,
+    contentType: string,
+    target: string
 ): string {
-    const width = variant?.width || resource.width;
-    const height = variant?.height || resource.height;
-    const dimensions = width && height
-            ? `-${width}x${height}`
-            : "";
-    const animation = resource.kind === "animation"
-            ? "-animation"
-            : "";
+    const suffix = resourceCount > 1
+        ? `-${resourceIndex + 1}`
+        : "";
     const extension = extensionFor(variant?.container, contentType, target);
-    return `resource-${resourceIndex + 1}${dimensions}${animation}.${extension}`;
+    return `${sourceKey}${suffix}.${extension}`;
 }
 
 function extensionFor(container: string | undefined, contentType: string, target: string): string {
     const normalized = container?.toLowerCase();
     if (normalized && /^[a-z0-9]{2,8}$/.test(normalized)) {
         return normalized === "m3u8"
-                ? "m3u8"
-                : normalized;
+            ? "m3u8"
+            : normalized;
     }
 
     const mime = contentType.split(";", 1)[0].trim().toLowerCase();
@@ -410,11 +413,11 @@ function normalizeEngineError(error: unknown): ResolveFailure {
         const value = error as { code?: unknown; message?: unknown };
         return {
             code: typeof value.code === "string"
-                    ? value.code
-                    : "internal",
+                ? value.code
+                : "internal",
             message: typeof value.message === "string"
-                    ? value.message
-                    : undefined
+                ? value.message
+                : undefined
         };
     }
     return { code: "internal" };
@@ -450,10 +453,10 @@ function statusForError(code: string): number {
 }
 
 function apiError(
-        status: number,
-        code: string,
-        message: string,
-        extraHeaders: HeadersInit = {}
+    status: number,
+    code: string,
+    message: string,
+    extraHeaders: HeadersInit = {}
 ): Response {
     const headers = new Headers(extraHeaders);
     headers.set("Cache-Control", "no-store");

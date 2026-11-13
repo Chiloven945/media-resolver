@@ -13,6 +13,7 @@ const props = defineProps<{
   resource: ResourceItem;
   sourceKey: string;
   resourceIndex: number;
+  resourceCount: number;
 }>();
 const toast = useToast();
 const actions = useResourceActions();
@@ -69,6 +70,7 @@ const primarySummary = computed(() => {
 
 const startDownload = async () => {
   const result = await downloads.download(props.sourceKey, props.resource, {
+    resourceCount: props.resourceCount,
     resourceIndex: props.resourceIndex,
     variant: preferred.value,
     variantIndex: preferredIndex.value
@@ -160,6 +162,7 @@ const startDownload = async () => {
         </div>
         <VariantList
             :resource="resource"
+            :resource-count="resourceCount"
             :resource-index="resourceIndex"
             :source-key="sourceKey"
             inline

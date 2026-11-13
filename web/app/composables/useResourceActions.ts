@@ -8,10 +8,12 @@ export function useResourceActions() {
     };
 
     const filename = (
-            resource: ResourceItem,
-            resourceIndex: number,
-            variant?: ResourceVariant
-    ) => resourceFilename(resource, resourceIndex, variant);
+        sourceKey: string,
+        resource: ResourceItem,
+        resourceIndex: number,
+        resourceCount: number,
+        variant?: ResourceVariant
+    ) => resourceFilename(sourceKey, resource, resourceIndex, resourceCount, variant);
 
     return { open, filename };
 }

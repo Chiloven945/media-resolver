@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<{
   resource: ResourceItem;
   sourceKey: string;
   resourceIndex: number;
+  resourceCount: number;
   inline?: boolean;
 }>(), {
   inline: false
@@ -104,6 +105,7 @@ const downloadLabel = (row: VariantRow) => {
 
 const downloadVariant = async (row: VariantRow) => {
   const result = await downloads.download(props.sourceKey, props.resource, {
+    resourceCount: props.resourceCount,
     resourceIndex: props.resourceIndex,
     variant: row.variant,
     variantIndex: row.index

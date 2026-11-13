@@ -9,6 +9,7 @@ const props = defineProps<{
   resource: ResourceItem;
   sourceKey: string;
   resourceIndex: number;
+  resourceCount: number;
 }>();
 const variantsOpen = ref(false);
 const toast = useToast();
@@ -50,6 +51,7 @@ const downloadLabel = computed(() => {
 
 const startDownload = async () => {
   const result = await downloads.download(props.sourceKey, props.resource, {
+    resourceCount: props.resourceCount,
     resourceIndex: props.resourceIndex,
     variant: preferred.value,
     variantIndex: preferredIndex.value
@@ -151,6 +153,7 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
     <template #body>
       <VariantList
           :resource="resource"
+          :resource-count="resourceCount"
           :resource-index="resourceIndex"
           :source-key="sourceKey"
       />

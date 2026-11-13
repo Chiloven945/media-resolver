@@ -2,207 +2,208 @@ import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 const corsHeaders = { "access-control-allow-origin": "*" };
 
-const engineModule = String.raw`
-export default async function init() {}
+const engineModule = /* language=JS */String.raw`export default async function init() {
+}
 
 function sourceKey(input) {
-  const key = input.match(/status\/(\d+)/)?.[1]
-  if (!key) throw { code: 'invalid_input' }
-  return key
+    const key = input.match(/status\/(\d+)/)?.[1]
+    if (!key) throw {code: 'invalid_input'}
+    return key
 }
 
 function makeRoutes(key, options) {
-  const routes = [
-    { routeKey: 'r0', url: 'https://primary.invalid/' + key }
-  ]
-  if (options?.gatewayEndpoint) {
-    routes.push({ routeKey: 'r1', url: 'https://managed.invalid/v1/resources/' + key })
-  }
-  routes.push({ routeKey: 'r' + routes.length, url: 'https://legacy.invalid/' + key })
-  return routes
+    const routes = [
+        {routeKey: 'r0', url: \`https://primary.invalid/${key}\`}
+    ]
+    if (options?.gatewayEndpoint) {
+        routes.push({routeKey: 'r1', url: \`https://managed.invalid/v1/resources/${key}\`})
+    }
+    routes.push({routeKey: \`r\${routes.length}\`, url: \`https://legacy.invalid/${key}\`})
+    return routes
 }
 
 function requestStep(session) {
-  const route = session.routes[session.index]
-  return {
-    kind: 'request',
-    session,
-    sourceKey: session.key,
-    normalizedInput: 'https://example.invalid/item/' + session.key,
-    request: {
-      routeKey: route.routeKey,
-      url: route.url,
-      method: 'GET',
-      headers: [],
-      retryPolicy: {
-        maxRetries: 2,
-        delaysMs: [10, 20],
-        retryStatuses: [429, 500, 502, 503, 504]
-      }
+    const route = session.routes[session.index]
+    return {
+        kind: 'request',
+        session,
+        sourceKey: session.key,
+        normalizedInput: \`https://example.invalid/item/${session.key}\`,
+        request: {
+            routeKey: route.routeKey,
+            url: route.url,
+            method: 'GET',
+            headers: [],
+            retryPolicy: {
+                maxRetries: 2,
+                delaysMs: [10, 20],
+                retryStatuses: [429, 500, 502, 503, 504]
+            }
+        }
     }
-  }
 }
 
 function finalFailure(session) {
-  const failures = session.failures || []
-  const priority = [
-    ['remote_not_found', 'not_found'],
-    ['no_resources', 'no_resources'],
-    ['rate_limited', 'rate_limited'],
-    ['remote_rejected', 'rejected'],
-    ['remote_unavailable', 'unavailable'],
-    ['network_unavailable', 'network']
-  ]
-  for (const [code, failure] of priority) {
-    if (failures.includes(failure)) return { kind: 'failed', error: { code } }
-  }
-  return { kind: 'failed', error: { code: 'invalid_response' } }
+    const failures = session.failures || []
+    const priority = [
+        ['remote_not_found', 'not_found'],
+        ['no_resources', 'no_resources'],
+        ['rate_limited', 'rate_limited'],
+        ['remote_rejected', 'rejected'],
+        ['remote_unavailable', 'unavailable'],
+        ['network_unavailable', 'network']
+    ]
+    for (const [code, failure] of priority) {
+        if (failures.includes(failure)) return {kind: 'failed', error: {code}}
+    }
+    return {kind: 'failed', error: {code: 'invalid_response'}}
 }
 
 function advance(session, failure) {
-  const next = {
-    ...session,
-    index: session.index + 1,
-    failures: [...(session.failures || []), failure]
-  }
-  if (next.index >= next.routes.length) return finalFailure(next)
-  return requestStep(next)
+    const next = {
+        ...session,
+        index: session.index + 1,
+        failures: [...(session.failures || []), failure]
+    }
+    if (next.index >= next.routes.length) return finalFailure(next)
+    return requestStep(next)
 }
 
 function resultFor(key) {
-  if (key === '7001') {
-    return {
-      schemaVersion: 1,
-      sourceKey: key,
-      resources: [{
-        id: key + ':video',
-        kind: 'video',
-        preferredUrl: 'https://assets.invalid/' + key + '-720.mp4',
-        previewUrl: 'https://assets.invalid/' + key + '-preview.jpg',
-        width: 720,
-        height: 1280,
-        variants: [
-          {
-            url: 'https://assets.invalid/' + key + '-720.mp4',
-            mimeType: 'video/mp4',
-            container: 'mp4',
-            codec: 'h264',
-            bitrate: 2200000,
-            sizeBytes: 14000000,
-            width: 720,
-            height: 1280
-          },
-          {
-            url: 'https://assets.invalid/' + key + '-480.mp4',
-            mimeType: 'video/mp4',
-            container: 'mp4',
-            codec: 'h264',
-            bitrate: 850000,
-            sizeBytes: 6000000,
-            width: 480,
-            height: 854
-          }
-        ]
-      }]
-    }
-  }
-
-  if (key === '7002') {
-    return {
-      schemaVersion: 1,
-      sourceKey: key,
-      resources: [1, 2].map(index => ({
-        id: key + ':' + index,
-        kind: 'image',
-        preferredUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
-        previewUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
-        width: 1200,
-        height: 800,
-        variants: [{
-          url: 'https://assets.invalid/' + key + '-' + index + '.jpg',
-          mimeType: 'image/jpeg',
-          container: 'jpg',
-          width: 1200,
-          height: 800
-        }]
-      }))
-    }
-  }
-
-  if (key === '7003') {
-    return {
-      schemaVersion: 1,
-      sourceKey: key,
-      resources: Array.from({ length: 12 }, (_, offset) => {
-        const index = offset + 1
+    if (key === '7001') {
         return {
-          id: key + ':' + index,
-          kind: 'image',
-          preferredUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
-          previewUrl: 'https://assets.invalid/' + key + '-' + index + '.jpg',
-          width: 1200,
-          height: 800,
-          variants: [{
-            url: 'https://assets.invalid/' + key + '-' + index + '.jpg',
-            mimeType: 'image/jpeg',
-            container: 'jpg',
-            width: 1200,
-            height: 800
-          }]
+            schemaVersion: 1,
+            sourceKey: key,
+            resources: [{
+                id: \`\${key}:video\`,
+                kind: 'video',
+                preferredUrl: \`https://assets.invalid/${key}-720.mp4\`,
+                previewUrl: \`https://assets.invalid/${key}-preview.jpg\`,
+                width: 720,
+                height: 1280,
+                variants: [
+                    {
+                        url: \`https://assets.invalid/${key}-720.mp4\`,
+                        mimeType: 'video/mp4',
+                        container: 'mp4',
+                        codec: 'h264',
+                        bitrate: 2200000,
+                        sizeBytes: 14000000,
+                        width: 720,
+                        height: 1280
+                    },
+                    {
+                        url: \`https://assets.invalid/${key}-480.mp4\`,
+                        mimeType: 'video/mp4',
+                        container: 'mp4',
+                        codec: 'h264',
+                        bitrate: 850000,
+                        sizeBytes: 6000000,
+                        width: 480,
+                        height: 854
+                    }
+                ]
+            }]
         }
-      })
     }
-  }
 
-  return {
-    schemaVersion: 1,
-    sourceKey: key,
-    resources: [{
-      id: key + ':1',
-      kind: 'image',
-      preferredUrl: 'https://assets.invalid/' + key + '.jpg',
-      previewUrl: 'https://assets.invalid/' + key + '.jpg',
-      width: 1200,
-      height: 800,
-      variants: [{
-        url: 'https://assets.invalid/' + key + '.jpg',
-        mimeType: 'image/jpeg',
-        container: 'jpg',
-        width: 1200,
-        height: 800
-      }]
-    }]
-  }
+    if (key === '7002') {
+        return {
+            schemaVersion: 1,
+            sourceKey: key,
+            resources: [1, 2].map(index => ({
+                id: \`\${key}:\${index}\`,
+                kind: 'image',
+                preferredUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                previewUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                width: 1200,
+                height: 800,
+                variants: [{
+                    url: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                    mimeType: 'image/jpeg',
+                    container: 'jpg',
+                    width: 1200,
+                    height: 800
+                }]
+            }))
+        }
+    }
+
+    if (key === '7003') {
+        return {
+            schemaVersion: 1,
+            sourceKey: key,
+            resources: Array.from({length: 12}, (_, offset) => {
+                const index = offset + 1
+                return {
+                    id: \`\${key}:\${index}\`,
+                    kind: 'image',
+                    preferredUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                    previewUrl: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                    width: 1200,
+                    height: 800,
+                    variants: [{
+                        url: \`https://assets.invalid/${key}-\${index}.jpg\`,
+                        mimeType: 'image/jpeg',
+                        container: 'jpg',
+                        width: 1200,
+                        height: 800
+                    }]
+                }
+            })
+        }
+    }
+
+    return {
+        schemaVersion: 1,
+        sourceKey: key,
+        resources: [{
+            id: \`\${key}:1\`,
+            kind: 'image',
+            preferredUrl: \`https://assets.invalid/${key}.jpg\`,
+            previewUrl: \`https://assets.invalid/${key}.jpg\`,
+            width: 1200,
+            height: 800,
+            variants: [{
+                url: \`https://assets.invalid/${key}.jpg\`,
+                mimeType: 'image/jpeg',
+                container: 'jpg',
+                width: 1200,
+                height: 800
+            }]
+        }]
+    }
 }
 
 export function start(input, options) {
-  const key = sourceKey(input)
-  return requestStep({ key, index: 0, routes: makeRoutes(key, options), failures: [] })
+    const key = sourceKey(input)
+    return requestStep({key, index: 0, routes: makeRoutes(key, options), failures: []})
 }
 
 export function respond(session, status, body) {
-  let payload = {}
-  try {
-    payload = JSON.parse(new TextDecoder().decode(body || new Uint8Array()))
-  } catch {}
+    let payload = {}
+    try {
+        payload = JSON.parse(new TextDecoder().decode(body || new Uint8Array()))
+    } catch {
+    }
 
-  if (payload.outcome === 'restricted') {
-    return { kind: 'failed', error: { code: 'remote_restricted' } }
-  }
-  if (payload.outcome === 'not_found') return advance(session, 'not_found')
-  if (payload.outcome === 'no_resources') return advance(session, 'no_resources')
-  if (payload.outcome === 'fallback') return advance(session, 'unavailable')
+    if (payload.outcome === 'restricted') {
+        return {kind: 'failed', error: {code: 'remote_restricted'}}
+    }
+    if (payload.outcome === 'not_found') return advance(session, 'not_found')
+    if (payload.outcome === 'no_resources') return advance(session, 'no_resources')
+    if (payload.outcome === 'fallback') return advance(session, 'unavailable')
 
-  if (status === 404) return advance(session, 'not_found')
-  if (status === 429) return advance(session, 'rate_limited')
-  if (status >= 500) return advance(session, 'unavailable')
-  if (status >= 400) return advance(session, 'rejected')
+    if (status === 404) return advance(session, 'not_found')
+    if (status === 429) return advance(session, 'rate_limited')
+    if (status >= 500) return advance(session, 'unavailable')
+    if (status >= 400) return advance(session, 'rejected')
 
-  return { kind: 'resolved', result: resultFor(session.key) }
+    return {kind: 'resolved', result: resultFor(session.key)}
 }
 
 export function transport_failed(session) {
-  return advance(session, 'network')
+    return advance(session, 'network')
 }
 `;
 
@@ -696,6 +697,23 @@ test("multiple resources use the resource grid", async ({ page }, testInfo) => {
     await expect(page.getByTestId("resource-detail")).toHaveCount(0);
 });
 
+test("multiple resources download with post id and sequence", async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    await expect(page.getByTestId("app-header")).toBeVisible({ timeout: 15_000 });
+    await addTask(page, "7002");
+
+    const cards = page.getByTestId("resource-card");
+    await expect(cards).toHaveCount(2);
+
+    const firstEvent = page.waitForEvent("download");
+    await cards.nth(0).getByRole("button", { name: "Download", exact: true }).click();
+    expect((await firstEvent).suggestedFilename()).toBe("7002-1.jpg");
+
+    const secondEvent = page.waitForEvent("download");
+    await cards.nth(1).getByRole("button", { name: "Download", exact: true }).click();
+    expect((await secondEvent).suggestedFilename()).toBe("7002-2.jpg");
+});
+
 test(
         "multiple resources can scroll all the way to the final card",
         async ({ page }, testInfo) => {
@@ -760,7 +778,7 @@ test("direct resource download creates a browser download", async ({ page }, tes
     const event = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download", exact: true }).click();
     const download = await event;
-    expect(download.suggestedFilename()).toBe("resource-1.jpg");
+    expect(download.suggestedFilename()).toBe("7101.jpg");
     await expect(page.getByText("Resource downloaded", { exact: true })).toBeVisible();
 });
 
@@ -791,7 +809,7 @@ test(
             const event = page.waitForEvent("download");
             await page.getByRole("button", { name: "Download", exact: true }).click();
             const download = await event;
-            expect(download.suggestedFilename()).toBe("gateway-file.jpg");
+            expect(download.suggestedFilename()).toBe("7102.jpg");
             expect(gatewayDownloads).toBe(1);
         }
 );
@@ -823,7 +841,7 @@ test("variant download uses the selected representation", async ({ page }, testI
     const event = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download 480×854" }).click();
     const download = await event;
-    expect(download.suggestedFilename()).toBe("resource-1-480x854.mp4");
+    expect(download.suggestedFilename()).toBe("7001.mp4");
 });
 
 test("download shows an in-progress state", async ({ page }, testInfo) => {

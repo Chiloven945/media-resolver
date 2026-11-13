@@ -64,6 +64,7 @@ const completedLabel = computed(() => {
       <ResourceDetail
           v-else-if="task.result && task.result.resources.length === 1 && task.result.resources[0]"
           :resource="task.result.resources[0]"
+          :resource-count="task.result.resources.length"
           :resource-index="0"
           :source-key="task.result.sourceKey"
       />

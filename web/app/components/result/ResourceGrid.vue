@@ -14,6 +14,7 @@ const props = defineProps<{
         v-for="(resource, index) in props.resources"
         :key="resource.id"
         :resource="resource"
+        :resource-count="props.resources.length"
         :resource-index="index"
         :source-key="sourceKey"
     />

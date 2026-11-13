@@ -7,6 +7,7 @@ const props = defineProps<{
   resource: ResourceItem;
   sourceKey: string;
   resourceIndex?: number;
+  resourceCount?: number;
 }>();
 </script>
 
@@ -16,6 +17,7 @@ const props = defineProps<{
     <ResourceViewer :resource="resource"/>
     <ResourceInspector
         :resource="resource"
+        :resource-count="props.resourceCount || 1"
         :resource-index="props.resourceIndex || 0"
         :source-key="sourceKey"
     />

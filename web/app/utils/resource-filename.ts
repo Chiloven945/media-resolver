@@ -1,25 +1,18 @@
 import type { ResourceItem, ResourceVariant } from "../types/engine";
 
 export function resourceFilename(
-        resource: ResourceItem,
-        resourceIndex: number,
-        variant?: ResourceVariant
+    sourceKey: string,
+    resource: ResourceItem,
+    resourceIndex: number,
+    resourceCount: number,
+    variant?: ResourceVariant
 ): string {
     const selected = variant || resource.variants.find(candidate => candidate.url
-            === resource.preferredUrl);
+        === resource.preferredUrl);
     const extension = extensionFor(resource, selected);
-    const base = `resource-${resourceIndex + 1}`;
-
-    if (resource.kind === "animation") {
-        return `${base}-animation.${extension}`;
-    }
-
-    if ((
-                    resource.kind === "video" || resource.kind === "unknown"
-            )
-            && selected?.width && selected?.height) {
-        return `${base}-${selected.width}x${selected.height}.${extension}`;
-    }
+    const base = resourceCount > 1
+        ? `${sourceKey}-${resourceIndex + 1}`
+        : sourceKey;
 
     return `${base}.${extension}`;
 }
@@ -28,8 +21,8 @@ function extensionFor(resource: ResourceItem, variant?: ResourceVariant): string
     const container = variant?.container?.toLowerCase();
     if (container && /^[a-z0-9]{2,8}$/.test(container)) {
         return container === "jpeg"
-                ? "jpg"
-                : container;
+            ? "jpg"
+            : container;
     }
 
     const mime = variant?.mimeType?.toLowerCase();
@@ -52,18 +45,22 @@ function extensionFor(resource: ResourceItem, variant?: ResourceVariant): string
         const match = path.match(/\.([a-z0-9]{2,8})$/i);
         if (match?.[1]) {
             return match[1].toLowerCase() === "jpeg"
-                    ? "jpg"
-                    : match[1].toLowerCase();
+                ? "jpg"
+                : match[1].toLowerCase();
         }
     } catch {
         // Use the type-derived fallback below.
     }
 
-    if (resource.kind === "image") {
-        return "jpg";
+    switch (resource.kind) {
+        case "image":
+            return "jpg";
+
+        case "video":
+        case "animation":
+            return "mp4";
+
+        default:
+            return "bin";
     }
-    if (resource.kind === "video" || resource.kind === "animation") {
-        return "mp4";
-    }
-    return "bin";
 }
